@@ -1,1 +1,244 @@
+// === CUPCLUB DATABASE SCHEMA ===
+
+// 1. KULLANICI VE YETKİLENDİRME MODÜLÜ
+Table Users {
+  id int [pk, increment]
+  first_name varchar(50)
+  last_name varchar(50)
+  email varchar(100) [unique]
+  phone varchar(20) [unique]
+  password_hash varchar(255)
+  created_at timestamp [default: `now()` ]
+}
+
+Table Roles {
+  id int [pk, increment]
+  role_name varchar(50) // 'Customer', 'BranchStaff', 'CentralAdmin', 'SystemAdmin'
+}
+//UserRoles tablosundaki branch_id alanı, şube personelinin sadece kendi şubesine ait siparişleri görmesini sağlar.
+Table UserRoles {
+  user_id int [ref: > Users.id]
+  role_id int [ref: > Roles.id]
+  branch_id int [null, ref: > Branches.id] // Şube personeli ise hangi şubeye ait olduğu
+  indexes {
+    (user_id, role_id) [pk]
+  }
+}
+
+// 2. ŞUBE MODÜLÜ
+Table Branches {
+  id int [pk, increment]
+  name varchar(100)
+  address text
+  latitude decimal(10,8)
+  longitude decimal(11,8)
+  working_hours varchar(100) // Örn: "08:00 - 22:00"
+  is_active boolean [default: true]
+}
+
+// 3. ÜRÜN KATALOĞU VE ŞUBE İLİŞKİLERİ
+Table Categories {
+  id int [pk, increment]
+  name varchar(50) // Kahve, Çay, Soğuk İçecek, Tatlı
+  display_order int
+}
+
+Table Products {
+  id int [pk, increment]
+  category_id int [ref: > Categories.id]
+  name varchar(100)
+  description text
+  image_url varchar(255)
+  allergens text // İşletme tarafından doğrulanmış alerjen bilgileri
+  is_active boolean [default: true]
+}
+
+// Senaryo 2: Şubeye göre fiyat ve bulunurluk (BranchProduct & BranchPrices)
+//Bu tablo sayesinde bir ürünün fiyatı şubeden şubeye değişebilir ve is_in_stock alanı ile o şubede biten siparişi engellenebilir.
+Table BranchProducts {
+  id int [pk, increment]
+  branch_id int [ref: > Branches.id]
+  product_id int [ref: > Products.id]
+  is_in_stock boolean [default: true] // Stokta yoksa sipariş edilemez
+  price decimal(10,2) // Şubeye özgü fiyat
+  indexes {
+    (branch_id, product_id) [unique]
+  }
+}
+
+// 4. ÜRÜN ÖZELLEŞTİRME MODÜLÜ
+Table ProductOptionGroups {
+  id int [pk, increment]
+  product_id int [ref: > Products.id]
+  name varchar(50) // Boyut, Süt Tipi, Şurup, Ekstra Shot
+  is_required boolean [default: false] // Zorunlu mu? (Örn: Boyut zorunlu, şurup isteğe bağlı)
+  min_selectable int [default: 1]
+  max_selectable int [default: 1]
+}
+
+Table ProductOptions {
+  id int [pk, increment]
+  group_id int [ref: > ProductOptionGroups.id]
+  name varchar(50) // Küçük, Büyük, Yağsız Süt, Vanilya Şurubu, +1 Shot
+  base_additional_price decimal(10,2) [default: 0.00] // Standart ek fiyat (Şubeye göre değişebilir)
+}
+
+// Opsiyonların şubeye göre fiyatının değişebilmesi için (Gelişmiş Yapı)
+Table BranchOptionPrices {
+  branch_id int [ref: > Branches.id]
+  option_id int [ref: > ProductOptions.id]
+  additional_price decimal(10,2)
+  indexes {
+    (branch_id, option_id) [pk]
+  }
+}
+
+// 5. SEPET VE SİPARİŞ MODÜLÜ
+Table Carts {
+  id int [pk, increment]
+  user_id int [ref: - Users.id] // Her kullanıcının 1 aktif sepeti olabilir
+  branch_id int [ref: > Branches.id] // Tek şubeye bağlı sepet kuralı
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table CartItems {
+  id int [pk, increment]
+  cart_id int [ref: > Carts.id]
+  product_id int [ref: > Products.id]
+  quantity int [default: 1]
+}
+
+Table CartItemOptions {
+  cart_item_id int [ref: > CartItems.id]
+  option_id int [ref: > ProductOptions.id]
+  indexes {
+    (cart_item_id, option_id) [pk]
+  }
+}
+
+Table Orders {
+  id int [pk, increment]
+  order_number varchar(20) [unique] // Benzersiz sipariş numarası (Idempotency için önemli)
+  user_id int [ref: > Users.id]
+  branch_id int [ref: > Branches.id]
+  total_amount decimal(10,2) // Brüt tutar
+  discount_amount decimal(10,2) [default: 0.00] // İndirim tutarı
+  final_amount decimal(10,2) // Net ödenecek (Sunucuda hesaplanır)
+  status varchar(30) // 'Received', 'Preparing', 'Ready', 'Delivered', 'Cancelled', 'Rejected' (State Pattern)
+  created_at timestamp [default: `now()` ]
+}
+
+Table OrderItems {
+  id int [pk, increment]
+  order_id int [ref: > Orders.id]
+  product_id int [ref: > Products.id]
+  quantity int
+  unit_price decimal(10,2) // Sipariş anındaki şube fiyatı
+}
+
+Table OrderItemOptions {
+  order_item_id int [ref: > OrderItems.id]
+  option_id int [ref: > ProductOptions.id]
+  additional_price decimal(10,2) // Sipariş anındaki opsiyon fiyatı
+  indexes {
+    (order_item_id, option_id) [pk]
+  }
+}
+
+Table Payments {
+  id int [pk, increment]
+  order_id int [ref: - Orders.id]
+  payment_method varchar(30) // 'PayAtBranch', 'SandboxCreditCard'
+  payment_status varchar(30) // 'Pending', 'Completed', 'Failed', 'Refunded'
+  transaction_id varchar(100) [null] // Idempotency token veya ödeme ref no
+  created_at timestamp
+}
+
+// 6. KAMPANYA VE SADAKAT MOTORU
+//Bu tabloda priotry(öncelik) ve can_combine(birleştirilebilirlik) alanları, backend'de yazacağımız Strategy/specification desenlerine zemin hazırlar
+
+Table Campaigns {
+  id int [pk, increment]
+  title varchar(150)
+  description text
+  campaign_type varchar(50) // 'Stamp', 'GiftProduct', 'Combo', 'HourlyDiscount', 'FirstOrder', 'Birthday'
+  priority int [default: 0] // Senaryo 3: Çakışma kontrolü öncelik sırası
+  can_combine boolean [default: false] // Diğer kampanyalarla birleşebilir mi?
+  min_cart_amount decimal(10,2) [default: 0.00]
+  start_date timestamp
+  end_date timestamp
+  is_active boolean [default: true]
+}
+
+// Kampanyanın hangi şubelerde geçerli olduğu (Senaryo 5)
+Table CampaignBranches {
+  campaign_id int [ref: > Campaigns.id]
+  branch_id int [ref: > Branches.id]
+  indexes {
+    (campaign_id, branch_id) [pk]
+  }
+}
+
+Table Coupons {
+  id int [pk, increment]
+  campaign_id int [ref: > Campaigns.id]
+  coupon_code varchar(20) [unique]
+  user_id int [null, ref: > Users.id] // Segment/Kişiye özel kupon ise
+  usage_limit int [default: 1]
+  used_count int [default: 0]
+  is_active boolean [default: true]
+}
+
+Table CouponRedemptions {
+  id int [pk, increment]
+  coupon_id int [ref: > Coupons.id]
+  order_id int [ref: > Orders.id]
+  user_id int [ref: > Users.id]
+  redeemed_at timestamp [default: `now()` ]
+}
+
+// 7. SADAKAT VE LOG MODÜLLERİ
+Table LoyaltyAccounts {
+  id int [pk, increment]
+  user_id int [ref: - Users.id]
+  total_points int [default: 0]
+  current_stamps int [default: 0] // Damga sistemi için (Örn: 5 kahveye 1 hediye)
+  updated_at timestamp
+}
+
+// Senaryo 4: Sadakat hareketleri değiştirilemez (Immutable Audit Trail)
+//bu tablo tamamen immutable(değiştirilemez)mantığındadır. İptal durumunda refund_rollback tipiyle işlem tersine çevrilir.
+//rewarddQRs tablosundaki is_used ve expires_at alanları ise tek kullanımlık kısa ömürlü QR şartını sağlar.---------------------------
+Table LoyaltyTransactions {
+  id int [pk, increment]
+  loyalty_account_id int [ref: > LoyaltyAccounts.id]
+  order_id int [null, ref: > Orders.id] // Hangi siparişten kazanıldı/harcandı
+  transaction_type varchar(30) // 'Earn_Point', 'Spend_Point', 'Earn_Stamp', 'Spend_Stamp', 'Refund_Rollback'
+  points_changed int [default: 0]
+  stamps_changed int [default: 0]
+  created_at timestamp [default: `now()` ]
+}
+
+Table RewardQRs {
+  id int [pk, increment]
+  user_id int [ref: > Users.id]
+  reward_type varchar(50) // 'FreeProduct'
+  qr_code_token varchar(100) [unique]
+  is_used boolean [default: false] // İkinci kez kullanılamaz kuralı
+  expires_at timestamp // Kısa ömürlü QR kuralı
+  created_at timestamp
+}
+
+Table AuditLogs {
+  id int [pk, increment]
+  user_id int [null, ref: > Users.id]
+  action varchar(100) // 'UPDATE_PRICE', 'CANCEL_ORDER', 'CREATE_CAMPAIGN'
+  table_name varchar(50)
+  record_id int
+  old_values text
+  new_values text
+  ip_address varchar(45)
+  created_at timestamp [default: `now()` ]
+}
 
