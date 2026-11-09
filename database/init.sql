@@ -382,4 +382,17 @@ BEGIN
     (3, new_prod_id, true, 95.00 + (i % 40));
   END LOOP;
 END $$;
+-- Örnek Kampanyalar (Öncelik ve birleşme kurallarıyla)
+INSERT INTO "Campaigns" ("title", "description", "campaign_type", "priority", "can_combine", "min_cart_amount", "start_date", "end_date", "is_active") VALUES
+('Hoş Geldin %20 İndirimi', '200 TL ve üzeri siparişlerde %20 indirim', 'PERCENTAGE', 10, false, 200.00, NOW() - INTERVAL '1 day', NOW() + INTERVAL '30 days', true),
+('Kahve Saati 30 TL İndirim', '150 TL üzeri siparişlerde 30 TL sabit indirim', 'FIXED_AMOUNT', 5, false, 150.00, NOW() - INTERVAL '1 day', NOW() + INTERVAL '30 days', true);
+
+-- Kampanya Kuralları (İndirim oranları/tutarları)
+INSERT INTO "CampaignRules" ("campaign_id", "rule_type", "rule_value") VALUES
+(1, 'DISCOUNT_PERCENT', '20'),
+(2, 'DISCOUNT_FIXED', '30');
+
+-- Örnek Kupon Kodu (WELCOME20)
+INSERT INTO "Coupons" ("campaign_id", "coupon_code", "usage_limit", "used_count", "is_active") VALUES
+(1, 'WELCOME20', 100, 0, true);
 

@@ -4,12 +4,14 @@ import { Repository } from 'typeorm';
 import { Order } from './order.entity';
 import { OrderItem } from './order-item.entity';
 import { BranchProduct } from '../catalog/branch-product.entity';
+import { OrdersGateway } from './orders.gateway';
 
 @Injectable()
 export class OrdersService {
   constructor(
     @InjectRepository(Order) private orderRepo: Repository<Order>,
     @InjectRepository(BranchProduct) private branchProductRepo: Repository<BranchProduct>,
+    private ordersGateway: OrdersGateway,
   ) {}
 
   async createOrder(data: { userId: number; branchId: number; items: { productId: number; quantity: number }[] }) {
@@ -61,6 +63,8 @@ export class OrdersService {
     const order = await this.orderRepo.findOne({ where: { id: orderId } });
     if (!order) throw new NotFoundException('Sipariş bulunamadı.');
     order.status = status;
-    return this.orderRepo.save(order);
+    const saved = await this.orderRepo.save(order);
+    this.ordersGateway.notifyOrderStatusChanged(saved.id, saved.branch_id, saved.status);
+    return saved;
   }
 }
