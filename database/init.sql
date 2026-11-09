@@ -396,3 +396,14 @@ INSERT INTO "CampaignRules" ("campaign_id", "rule_type", "rule_value") VALUES
 INSERT INTO "Coupons" ("campaign_id", "coupon_code", "usage_limit", "used_count", "is_active") VALUES
 (1, 'WELCOME20', 100, 0, true);
 
+-- Sistem Rolleri
+INSERT INTO "Roles" ("role_name") VALUES ('CUSTOMER'), ('BRANCH_STAFF'), ('ADMIN');
+
+-- Örnek Şube Personeli (Kadıköy Şubesi - branch_id: 1)
+-- Şifresi: 123456 (bcrypt hash)
+INSERT INTO "Users" ("first_name", "last_name", "email", "password_hash") VALUES
+('Ahmet', 'Barista', 'kadikoy.personel@cupclub.com', '$2b$10$EpRnTzVlqHNP0.fUbXUwSOyuiXe/QLSUG6xNekdHgTGmrpHEfIoxm');
+
+-- Ahmet Barista'ya Şube Personeli rolü (role_id: 2) ve Kadıköy şubesi (branch_id: 1) yetkisi verelim
+INSERT INTO "UserRoles" ("user_id", "role_id", "branch_id") VALUES
+((SELECT id FROM "Users" WHERE email = 'kadikoy.personel@cupclub.com'), 2, 1);
