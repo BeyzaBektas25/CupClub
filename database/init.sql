@@ -349,4 +349,37 @@ INSERT INTO "BranchProducts" ("branch_id", "product_id", "is_in_stock", "price")
 (3, 2, true, 100.00),
 (3, 3, true, 165.00);
 
+-- 4. Kategoriyi ekleyelim (Çaylar)
+INSERT INTO "Categories" ("name", "display_order") VALUES ('Çaylar', 4);
+
+-- 57 yeni ürünü ve 3 şube için özel fiyatlarını otomatik oluşturan blok (Toplam 60 ürün olur)
+DO $$
+DECLARE
+  i INT;
+  new_prod_id INT;
+  cat_id INT;
+BEGIN
+  FOR i IN 4..60 LOOP
+    cat_id := ((i - 1) % 4) + 1;
+    INSERT INTO "Products" ("category_id", "name", "description", "allergens", "is_active")
+    VALUES (
+      cat_id,
+      CASE cat_id
+        WHEN 1 THEN 'Özel Harman Kahve #' || i
+        WHEN 2 THEN 'Buzlu Serinletici #' || i
+        WHEN 3 THEN 'Artizan Tatlı #' || i
+        ELSE 'Bitki & Dünya Çayı #' || i
+      END,
+      'CupClub özel reçetesi ile hazırlanan taze lezzet #' || i,
+      CASE WHEN cat_id = 3 THEN 'Gluten, süt ve yumurta içerebilir' ELSE 'Alerjen bilgisi için danışınız' END,
+      true
+    ) RETURNING id INTO new_prod_id;
+
+    -- 3 Şube için farklı fiyatlar ata
+    INSERT INTO "BranchProducts" ("branch_id", "product_id", "is_in_stock", "price") VALUES
+    (1, new_prod_id, true, 90.00 + (i % 40)),
+    (2, new_prod_id, (i % 7 <> 0), 100.00 + (i % 40)), -- Bazı ürünler Beşiktaş'ta stok dışı
+    (3, new_prod_id, true, 95.00 + (i % 40));
+  END LOOP;
+END $$;
 
