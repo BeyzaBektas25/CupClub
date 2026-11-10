@@ -1,4 +1,4 @@
-# 🏛️ CupClub — Yazılım Mimarisi ve Teknik Karar Dokümanı
+# 🏛️ CupClub — Yazılım Mimarisi ve Teknik Karar Dokümantasyonu
 
 ## 1. Mimari Yaklaşım: Modüler Monolit (Modular Monolith)
 CupClub sunucu katmanı **NestJS (TypeScript)** üzerinde **Modüler Monolit** mimarisiyle inşa edilmiştir.
