@@ -29,13 +29,19 @@ SET "is_active" = false;
 
 -- 3. Gerçek menü ürünlerini ekle
 INSERT INTO "Products"
-("category_id", "name", "description", "allergens", "is_active")
+("category_id", "name", "description", "allergens", "unit", "is_active")
 SELECT
     c.id,
     v.product_name,
     NULL,
     NULL,
+    CASE
+        WHEN c.name = 'Tatlılar / Kurabiyeler' THEN 'Adet'
+        WHEN c.name LIKE 'Tatlılar / %' THEN 'Porsiyon'
+        ELSE 'Adet'
+    END,
     true
+
 FROM (VALUES
     ('Sıcak İçecekler / Çaylar', 'Siyah Çay'),
     ('Sıcak İçecekler / Çaylar', 'Yeşil Çay'),
@@ -146,6 +152,21 @@ WHERE category_id IN (
        OR name LIKE 'Soğuk İçecekler / %'
        OR name LIKE 'Tatlılar / %'
 );
+
+-- 4.1 Ürünlerin satış birimlerini belirle
+UPDATE "Products" p
+SET "unit" = CASE
+    WHEN c.name = 'Tatlılar / Kurabiyeler' THEN 'Adet'
+    WHEN c.name LIKE 'Tatlılar / %' THEN 'Porsiyon'
+    ELSE 'Adet'
+END
+FROM "Categories" c
+WHERE p.category_id = c.id
+  AND (
+      c.name LIKE 'Sıcak İçecekler / %'
+      OR c.name LIKE 'Soğuk İçecekler / %'
+      OR c.name LIKE 'Tatlılar / %'
+  );
 
 -- 5. Eski örnek ürünlerin şube stoklarını kapat
 UPDATE "BranchProducts"
