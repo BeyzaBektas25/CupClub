@@ -1,6 +1,7 @@
+
 BEGIN;
 
--- 1. Yeni 14 alt kategoriyi ekle
+-- 1. Menü kategorilerini ekle
 INSERT INTO "Categories" ("name", "display_order")
 SELECT v.name, v.display_order
 FROM (VALUES
@@ -17,13 +18,16 @@ FROM (VALUES
     ('Tatlılar / Baklava Çeşitleri', 11),
     ('Tatlılar / Waffle Çeşitleri', 12),
     ('Tatlılar / Sütlü Tatlılar & Pudingler', 13),
-    ('Tatlılar / Kurabiyeler', 14)
+    ('Tatlılar / Kurabiyeler', 14),
+    ('Atıştırmalıklar & Fırın Ürünleri', 15)
 ) AS v(name, display_order)
 WHERE NOT EXISTS (
-    SELECT 1 FROM "Categories" c WHERE c.name = v.name
+    SELECT 1
+    FROM "Categories" c
+    WHERE c.name = v.name
 );
 
--- 2. Eski örnek ürünleri pasife al
+-- 2. Mevcut ürünleri pasife al
 UPDATE "Products"
 SET "is_active" = false;
 
@@ -41,7 +45,6 @@ SELECT
         ELSE 'Adet'
     END,
     true
-
 FROM (VALUES
     ('Sıcak İçecekler / Çaylar', 'Siyah Çay'),
     ('Sıcak İçecekler / Çaylar', 'Yeşil Çay'),
@@ -133,7 +136,17 @@ FROM (VALUES
     ('Tatlılar / Kurabiyeler', 'Beyaz Çikolatalı Kurabiye'),
     ('Tatlılar / Kurabiyeler', 'Çikolata Parçalı Kurabiye'),
     ('Tatlılar / Kurabiyeler', 'Kakaolu Kurabiye'),
-    ('Tatlılar / Kurabiyeler', 'Un Kurabiyesi')
+    ('Tatlılar / Kurabiyeler', 'Un Kurabiyesi'),
+
+    ('Atıştırmalıklar & Fırın Ürünleri', 'Kaşarlı Tost'),
+    ('Atıştırmalıklar & Fırın Ürünleri', 'Sucuklu Tost'),
+    ('Atıştırmalıklar & Fırın Ürünleri', 'Karışık Tost'),
+    ('Atıştırmalıklar & Fırın Ürünleri', 'Soğuk Sandviç'),
+    ('Atıştırmalıklar & Fırın Ürünleri', 'Simit'),
+    ('Atıştırmalıklar & Fırın Ürünleri', 'Sade Poğaça'),
+    ('Atıştırmalıklar & Fırın Ürünleri', 'Peynirli Poğaça'),
+    ('Atıştırmalıklar & Fırın Ürünleri', 'Zeytinli Poğaça'),
+    ('Atıştırmalıklar & Fırın Ürünleri', 'Patatesli Poğaça')
 ) AS v(category_name, product_name)
 JOIN "Categories" c ON c.name = v.category_name
 WHERE NOT EXISTS (
@@ -147,10 +160,12 @@ WHERE NOT EXISTS (
 UPDATE "Products"
 SET "is_active" = true
 WHERE category_id IN (
-    SELECT id FROM "Categories"
+    SELECT id
+    FROM "Categories"
     WHERE name LIKE 'Sıcak İçecekler / %'
        OR name LIKE 'Soğuk İçecekler / %'
        OR name LIKE 'Tatlılar / %'
+       OR name = 'Atıştırmalıklar & Fırın Ürünleri'
 );
 
 -- 4.1 Ürünlerin satış birimlerini belirle
@@ -166,9 +181,10 @@ WHERE p.category_id = c.id
       c.name LIKE 'Sıcak İçecekler / %'
       OR c.name LIKE 'Soğuk İçecekler / %'
       OR c.name LIKE 'Tatlılar / %'
+      OR c.name = 'Atıştırmalıklar & Fırın Ürünleri'
   );
 
--- 5. Eski örnek ürünlerin şube stoklarını kapat
+-- 5. Eski menüye ait ürünlerin şube stoklarını kapat
 UPDATE "BranchProducts"
 SET "is_in_stock" = false
 WHERE product_id IN (
@@ -178,10 +194,12 @@ WHERE product_id IN (
     WHERE c.name NOT LIKE 'Sıcak İçecekler / %'
       AND c.name NOT LIKE 'Soğuk İçecekler / %'
       AND c.name NOT LIKE 'Tatlılar / %'
+      AND c.name <> 'Atıştırmalıklar & Fırın Ürünleri'
 );
 
--- 6. Yeni ürünleri üç şubeyle ilişkilendir
--- Fiyatlar NULL, satış durumu şimdilik kapalı
+-- 6. Menü ürünlerini üç şubeyle ilişkilendir
+-- Yeni kayıtların fiyatı NULL ve stok durumu kapalıdır.
+-- Mevcut kayıtların fiyatı ve stok durumu değiştirilmez.
 INSERT INTO "BranchProducts"
 ("branch_id", "product_id", "is_in_stock", "price")
 SELECT b.id, p.id, false, NULL
@@ -191,7 +209,8 @@ JOIN "Categories" c ON c.id = p.category_id
 WHERE c.name LIKE 'Sıcak İçecekler / %'
    OR c.name LIKE 'Soğuk İçecekler / %'
    OR c.name LIKE 'Tatlılar / %'
+   OR c.name = 'Atıştırmalıklar & Fırın Ürünleri'
 ON CONFLICT ("branch_id", "product_id")
-DO UPDATE SET "is_in_stock" = false;
+DO NOTHING;
 
 COMMIT;

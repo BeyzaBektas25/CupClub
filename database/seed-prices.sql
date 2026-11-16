@@ -85,27 +85,40 @@ WITH price_list(product_name, base_price) AS (
     ('Beyaz Çikolatalı Kurabiye', 75),
     ('Çikolata Parçalı Kurabiye', 70),
     ('Kakaolu Kurabiye', 60),
-    ('Un Kurabiyesi', 55)
+    ('Un Kurabiyesi', 55),
+
+     -- ATISTIRMALIKLAR VE FIRIN URUNLERI
+    ('Kaşarlı Tost', 100),
+    ('Sucuklu Tost', 120),
+    ('Karışık Tost', 130),
+    ('Soğuk Sandviç', 120),
+    ('Simit', 25),
+    ('Sade Poğaça', 30),
+    ('Peynirli Poğaça', 35),
+    ('Zeytinli Poğaça', 35),
+    ('Patatesli Poğaça', 35)
 )
 
 UPDATE "BranchProducts" bp
 SET "price" = pl.base_price +
     CASE
-        WHEN b.name = 'CupClub Kadıköy Moda' THEN
-            CASE
-                WHEN c.name LIKE 'Sıcak İçecekler / %' THEN 5
-                ELSE 10
-            END
+    WHEN b.name = 'CupClub Kadıköy Moda' THEN
+        CASE
+            WHEN c.name = 'Atıştırmalıklar & Fırın Ürünleri' THEN 5
+            WHEN c.name LIKE 'Sıcak İçecekler / %' THEN 5
+            ELSE 10
+        END
 
-        WHEN b.name = 'CupClub Beşiktaş Çarşı' THEN
-            CASE
-                WHEN c.name LIKE 'Sıcak İçecekler / %' THEN 10
-                WHEN c.name LIKE 'Soğuk İçecekler / %' THEN 12
-                ELSE 15
-            END
+    WHEN b.name = 'CupClub Beşiktaş Çarşı' THEN
+        CASE
+            WHEN c.name = 'Atıştırmalıklar & Fırın Ürünleri' THEN 10
+            WHEN c.name LIKE 'Sıcak İçecekler / %' THEN 10
+            WHEN c.name LIKE 'Soğuk İçecekler / %' THEN 12
+            ELSE 15
+        END
 
-        ELSE 0
-    END
+    ELSE 0
+END
 FROM "Branches" b,
      "Products" p,
      "Categories" c,
