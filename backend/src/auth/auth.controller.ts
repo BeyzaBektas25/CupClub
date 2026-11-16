@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 
@@ -35,7 +35,8 @@ export class AuthController {
       },
     },
   })
-  login(@Body() body: { email: string; password: string }) {
-    return this.authService.login(body);
-  }
+  @HttpCode(HttpStatus.OK)
+login(@Body() body: { email: string; password: string }) {
+  return this.authService.login(body);
+ }
 }
