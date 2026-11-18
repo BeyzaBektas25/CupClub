@@ -19,7 +19,7 @@ FROM (VALUES
     ('Tatlılar / Waffle Çeşitleri', 12),
     ('Tatlılar / Sütlü Tatlılar & Pudingler', 13),
     ('Tatlılar / Kurabiyeler', 14),
-    ('Atıştırmalıklar & Fırın Ürünleri', 15)
+    ('Atıştırmalıklar', 15)
 ) AS v(name, display_order)
 WHERE NOT EXISTS (
     SELECT 1
@@ -138,15 +138,15 @@ FROM (VALUES
     ('Tatlılar / Kurabiyeler', 'Kakaolu Kurabiye'),
     ('Tatlılar / Kurabiyeler', 'Un Kurabiyesi'),
 
-    ('Atıştırmalıklar & Fırın Ürünleri', 'Kaşarlı Tost'),
-    ('Atıştırmalıklar & Fırın Ürünleri', 'Sucuklu Tost'),
-    ('Atıştırmalıklar & Fırın Ürünleri', 'Karışık Tost'),
-    ('Atıştırmalıklar & Fırın Ürünleri', 'Soğuk Sandviç'),
-    ('Atıştırmalıklar & Fırın Ürünleri', 'Simit'),
-    ('Atıştırmalıklar & Fırın Ürünleri', 'Sade Poğaça'),
-    ('Atıştırmalıklar & Fırın Ürünleri', 'Peynirli Poğaça'),
-    ('Atıştırmalıklar & Fırın Ürünleri', 'Zeytinli Poğaça'),
-    ('Atıştırmalıklar & Fırın Ürünleri', 'Patatesli Poğaça')
+    ('Atıştırmalıklar', 'Kaşarlı Tost'),
+    ('Atıştırmalıklar', 'Sucuklu Tost'),
+    ('Atıştırmalıklar', 'Karışık Tost'),
+    ('Atıştırmalıklar', 'Soğuk Sandviç'),
+    ('Atıştırmalıklar', 'Simit'),
+    ('Atıştırmalıklar', 'Sade Poğaça'),
+    ('Atıştırmalıklar', 'Peynirli Poğaça'),
+    ('Atıştırmalıklar', 'Zeytinli Poğaça'),
+    ('Atıştırmalıklar', 'Patatesli Poğaça')
 ) AS v(category_name, product_name)
 JOIN "Categories" c ON c.name = v.category_name
 WHERE NOT EXISTS (
@@ -165,7 +165,7 @@ WHERE category_id IN (
     WHERE name LIKE 'Sıcak İçecekler / %'
        OR name LIKE 'Soğuk İçecekler / %'
        OR name LIKE 'Tatlılar / %'
-       OR name = 'Atıştırmalıklar & Fırın Ürünleri'
+       OR name = 'Atıştırmalıklar'
 );
 
 -- 4.1 Ürünlerin satış birimlerini belirle
@@ -181,7 +181,7 @@ WHERE p.category_id = c.id
       c.name LIKE 'Sıcak İçecekler / %'
       OR c.name LIKE 'Soğuk İçecekler / %'
       OR c.name LIKE 'Tatlılar / %'
-      OR c.name = 'Atıştırmalıklar & Fırın Ürünleri'
+      OR c.name = 'Atıştırmalıklar'
   );
 
 -- 5. Eski menüye ait ürünlerin şube stoklarını kapat
@@ -194,7 +194,7 @@ WHERE product_id IN (
     WHERE c.name NOT LIKE 'Sıcak İçecekler / %'
       AND c.name NOT LIKE 'Soğuk İçecekler / %'
       AND c.name NOT LIKE 'Tatlılar / %'
-      AND c.name <> 'Atıştırmalıklar & Fırın Ürünleri'
+      AND c.name <> 'Atıştırmalıklar'
 );
 
 -- 6. Menü ürünlerini üç şubeyle ilişkilendir
@@ -209,7 +209,7 @@ JOIN "Categories" c ON c.id = p.category_id
 WHERE c.name LIKE 'Sıcak İçecekler / %'
    OR c.name LIKE 'Soğuk İçecekler / %'
    OR c.name LIKE 'Tatlılar / %'
-   OR c.name = 'Atıştırmalıklar & Fırın Ürünleri'
+   OR c.name = 'Atıştırmalıklar'
 ON CONFLICT ("branch_id", "product_id")
 DO NOTHING;
 
