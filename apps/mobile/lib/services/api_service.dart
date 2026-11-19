@@ -6,9 +6,9 @@ import 'package:http/http.dart' as http;
 import '../core/config/api_config.dart';
 import '../models/branch.dart';
 import '../models/branch_product.dart';
+import '../models/product_option_group.dart';
 
 class ApiService {
-  // Bütün ürünleri getirir
   Future<void> getProducts() async {
     final url = Uri.parse('${ApiConfig.baseUrl}/products');
 
@@ -17,7 +17,6 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
         debugPrint('Ürünler başarıyla alındı:');
         debugPrint(data.toString());
       } else {
@@ -28,9 +27,8 @@ class ApiService {
     }
   }
 
-  // Şubeleri API'den getirir
   Future<List<Branch>> getBranches() async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/api/branches');
+    final url = Uri.parse('${ApiConfig.baseUrl}/branches');
 
     try {
       final response = await http.get(url);
@@ -55,11 +53,8 @@ class ApiService {
     }
   }
 
-  // Seçilen şubenin ürünlerini getirir
   Future<List<BranchProduct>> getBranchProducts(int branchId) async {
-    final url = Uri.parse(
-      '${ApiConfig.baseUrl}/api/branches/$branchId/products',
-    );
+    final url = Uri.parse('${ApiConfig.baseUrl}/branches/$branchId/products');
 
     try {
       final response = await http.get(url);
@@ -80,6 +75,36 @@ class ApiService {
       }
     } catch (e) {
       debugPrint('Ürün bağlantı hatası: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<ProductOptionGroup>> getProductOptions(
+    int branchId,
+    int productId,
+  ) async {
+    final url = Uri.parse(
+      '${ApiConfig.baseUrl}/branches/$branchId/products/$productId/options',
+    );
+
+    try {
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+
+        final options = data.map((item) {
+          return ProductOptionGroup.fromJson(Map<String, dynamic>.from(item));
+        }).toList();
+
+        debugPrint('Ürün seçenekleri başarıyla getirildi:');
+
+        return options;
+      } else {
+        throw Exception('Ürün seçenekleri alınamadı: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Ürün seçenekleri bağlantı hatası: $e');
       rethrow;
     }
   }
