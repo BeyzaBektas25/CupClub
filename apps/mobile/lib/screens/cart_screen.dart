@@ -1,21 +1,98 @@
 import 'package:flutter/material.dart';
 
 import '../models/cart_item.dart';
+import '../services/auth_service.dart';
+import '../services/api_service.dart';
 import '../services/cart_service.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   final CartService cartService;
+  final int branchId;
 
-  const CartScreen({super.key, required this.cartService});
+  const CartScreen({
+    super.key,
+    required this.cartService,
+    required this.branchId,
+  });
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  bool _isSubmitting = false;
+
+  final AuthService _authService = AuthService();
+  final ApiService _apiService = ApiService();
+
+  Future<void> _completeOrder() async {
+    if (_isSubmitting || widget.cartService.items.isEmpty) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final userId = await _authService.getCurrentUserId();
+
+      final orderItems = widget.cartService.items.map((item) {
+        return {
+          'productId': item.productId,
+          'quantity': item.quantity,
+          'optionIds': item.selectedOptions.map((option) => option.id).toList(),
+        };
+      }).toList();
+
+      await _apiService.createOrder(
+        userId: userId,
+        branchId: widget.branchId,
+        items: orderItems,
+      );
+
+      widget.cartService.clearCart();
+
+      if (!mounted) return;
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Siparişiniz alındı!'),
+            content: const Text('Siparişiniz başarıyla oluşturuldu.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Tamam'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Sipariş oluşturulamadı: $e')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Sepetim')),
       body: ListenableBuilder(
-        listenable: cartService,
+        listenable: widget.cartService,
         builder: (context, child) {
-          final items = cartService.items;
+          final items = widget.cartService.items;
 
           if (items.isEmpty) {
             return const Center(child: Text('Sepetiniz henüz boş.'));
@@ -30,7 +107,10 @@ class CartScreen extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final item = items[index];
 
-                    return _CartItemCard(item: item, cartService: cartService);
+                    return _CartItemCard(
+                      item: item,
+                      cartService: widget.cartService,
+                    );
                   },
                 ),
               ),
@@ -51,7 +131,7 @@ class CartScreen extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${cartService.totalPrice.toStringAsFixed(2)} TL',
+                            '${widget.cartService.totalPrice.toStringAsFixed(2)} TL',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
@@ -63,8 +143,16 @@ class CartScreen extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: null,
-                          child: const Text('Siparişi Tamamla'),
+                          onPressed: _isSubmitting ? null : _completeOrder,
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text('Siparişi Tamamla'),
                         ),
                       ),
                     ],

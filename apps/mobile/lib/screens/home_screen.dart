@@ -66,7 +66,10 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CartScreen(cartService: _cartService),
+        builder: (context) => CartScreen(
+          cartService: _cartService,
+          branchId: widget.selectedBranch.id,
+        ),
       ),
     );
   }

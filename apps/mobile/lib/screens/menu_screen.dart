@@ -90,7 +90,10 @@ class _MenuScreenState extends State<MenuScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CartScreen(cartService: widget.cartService),
+        builder: (context) => CartScreen(
+          cartService: widget.cartService,
+          branchId: widget.selectedBranch.id,
+        ),
       ),
     );
   }
@@ -284,6 +287,8 @@ class _ProductCustomizationSheetState extends State<ProductCustomizationSheet> {
 
   int _quantity = 1;
 
+  bool _showSelectionError = false;
+
   @override
   void initState() {
     super.initState();
@@ -298,7 +303,7 @@ class _ProductCustomizationSheetState extends State<ProductCustomizationSheet> {
     final result = <ProductOption>[];
 
     for (final group in groups) {
-      final selectedIds = _selectedOptions[group.id] ?? {};
+      final selectedIds = _selectedOptions[group.id] ?? <int>{};
 
       for (final option in group.options) {
         if (selectedIds.contains(option.id)) {
@@ -339,27 +344,44 @@ class _ProductCustomizationSheetState extends State<ProductCustomizationSheet> {
     setState(() {
       final selectedIds = _selectedOptions.putIfAbsent(group.id, () => <int>{});
 
-      if (selected) {
-        if (group.maxSelectable == 1) {
+      if (group.maxSelectable == 1) {
+        if (group.isRequired) {
+          // Zorunlu seçim kaldırılamaz.
+          // Başka bir seçenek seçilirse öncekinin yerine geçer.
           selectedIds
             ..clear()
             ..add(option.id);
-        } else if (selectedIds.length < group.maxSelectable) {
-          selectedIds.add(option.id);
+        } else {
+          // İsteğe bağlı seçim tekrar dokunulunca kaldırılır.
+          if (selectedIds.contains(option.id)) {
+            selectedIds.remove(option.id);
+          } else {
+            selectedIds
+              ..clear()
+              ..add(option.id);
+          }
         }
       } else {
-        selectedIds.remove(option.id);
+        if (selected) {
+          if (!selectedIds.contains(option.id) &&
+              selectedIds.length < group.maxSelectable) {
+            selectedIds.add(option.id);
+          }
+        } else {
+          // Çoklu seçimli zorunlu grupta minimum sayı korunur.
+          if (!group.isRequired || selectedIds.length > group.minSelectable) {
+            selectedIds.remove(option.id);
+          }
+        }
       }
     });
   }
 
   void _addToCart(List<ProductOptionGroup> groups) {
     if (!_hasValidSelections(groups)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Lütfen zorunlu seçenekleri kontrol edin.'),
-        ),
-      );
+      setState(() {
+        _showSelectionError = true;
+      });
       return;
     }
 
@@ -380,14 +402,107 @@ class _ProductCustomizationSheetState extends State<ProductCustomizationSheet> {
         .showSnackBar(const SnackBar(content: Text('Ürün sepete eklenemedi.')));
   }
 
+  Widget _buildGroupTitle(ProductOptionGroup group, BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              group.name,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Text(
+              group.isRequired ? 'Gerekli' : 'İsteğe bağlı',
+              style: TextStyle(
+                color: group.isRequired
+                    ? Colors.red.shade700
+                    : Colors.grey.shade600,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          group.isRequired
+              ? 'Bir seçenek belirleyin'
+              : 'Dilerseniz seçim yapabilirsiniz',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOptionGroup(ProductOptionGroup group, BuildContext context) {
+    final selectedIds = _selectedOptions[group.id] ?? <int>{};
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(),
+        _buildGroupTitle(group, context),
+        const SizedBox(height: 8),
+
+        if (group.maxSelectable == 1 && group.isRequired)
+          RadioGroup<int>(
+            groupValue: selectedIds.isEmpty ? null : selectedIds.first,
+            onChanged: (value) {
+              if (value != null) {
+                final option = group.options.firstWhere(
+                  (option) => option.id == value,
+                );
+                _toggleOption(group, option, true);
+              }
+            },
+            child: Column(
+              children: group.options.map((option) {
+                return RadioListTile<int>(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    '${option.name} '
+                    '(+${option.additionalPrice.toStringAsFixed(2)} TL)',
+                  ),
+                  value: option.id,
+                  selected: selectedIds.contains(option.id),
+                );
+              }).toList(),
+            ),
+          )
+        else
+          ...group.options.map((option) {
+            final isSelected = selectedIds.contains(option.id);
+
+            return CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                '${option.name} '
+                '(+${option.additionalPrice.toStringAsFixed(2)} TL)',
+              ),
+              value: isSelected,
+              onChanged: (value) {
+                _toggleOption(group, option, value ?? false);
+              },
+            );
+          }),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<ProductOptionGroup>>(
       future: _optionsFuture,
       builder: (context, snapshot) {
         final groups = snapshot.data ?? [];
+
         final selectedOptions = _getSelectedOptions(groups);
+
         final total = _calculateTotal(selectedOptions);
+
+        final hasValidSelections = _hasValidSelections(groups);
 
         return Padding(
           padding: EdgeInsets.only(
@@ -425,6 +540,7 @@ class _ProductCustomizationSheetState extends State<ProductCustomizationSheet> {
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
+
                 if (snapshot.connectionState == ConnectionState.waiting)
                   const Expanded(
                     child: Center(child: CircularProgressIndicator()),
@@ -456,109 +572,23 @@ class _ProductCustomizationSheetState extends State<ProductCustomizationSheet> {
                   Flexible(
                     child: ListView(
                       shrinkWrap: true,
-                      children: [
-                        ...groups.map((group) {
-                          final selectedIds =
-                              _selectedOptions[group.id] ?? <int>{};
-
-                          if (group.maxSelectable == 1) {
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Divider(),
-                                Text(
-                                  group.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  group.isRequired
-                                      ? 'Zorunlu - En az ${group.minSelectable} seçim'
-                                      : 'İsteğe bağlı',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                                RadioGroup<int>(
-                                  groupValue: selectedIds.isEmpty
-                                      ? null
-                                      : selectedIds.first,
-                                  onChanged: (value) {
-                                    if (value != null) {
-                                      final option = group.options.firstWhere(
-                                        (option) => option.id == value,
-                                      );
-                                      _toggleOption(group, option, true);
-                                    }
-                                  },
-                                  child: Column(
-                                    children: group.options.map((option) {
-                                      final isSelected = selectedIds.contains(
-                                        option.id,
-                                      );
-
-                                      return RadioListTile<int>(
-                                        contentPadding: EdgeInsets.zero,
-                                        title: Text(
-                                          '${option.name} (+${option.additionalPrice.toStringAsFixed(2)} TL)',
-                                        ),
-                                        value: option.id,
-                                        selected: isSelected,
-                                      );
-                                    }).toList(),
-                                  ),
-                                ),
-                              ],
-                            );
-                          }
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Divider(),
-                              Text(
-                                group.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                group.isRequired
-                                    ? 'Zorunlu - En az ${group.minSelectable} seçim'
-                                    : 'İsteğe bağlı',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                              ...group.options.map((option) {
-                                final isSelected = selectedIds.contains(
-                                  option.id,
-                                );
-
-                                return CheckboxListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  title: Text(
-                                    '${option.name} (+${option.additionalPrice.toStringAsFixed(2)} TL)',
-                                  ),
-                                  value: isSelected,
-                                  onChanged: (value) {
-                                    _toggleOption(
-                                      group,
-                                      option,
-                                      value ?? false,
-                                    );
-                                  },
-                                );
-                              }),
-                            ],
-                          );
-                        }),
-                      ],
+                      children: groups.map((group) {
+                        return _buildOptionGroup(group, context);
+                      }).toList(),
                     ),
                   ),
+
                 const Divider(),
+
                 Row(
                   children: [
                     IconButton(
                       onPressed: _quantity > 1
-                          ? () => setState(() => _quantity--)
+                          ? () {
+                              setState(() {
+                                _quantity--;
+                              });
+                            }
                           : null,
                       icon: const Icon(Icons.remove_circle_outline),
                     ),
@@ -567,7 +597,11 @@ class _ProductCustomizationSheetState extends State<ProductCustomizationSheet> {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
-                      onPressed: () => setState(() => _quantity++),
+                      onPressed: () {
+                        setState(() {
+                          _quantity++;
+                        });
+                      },
                       icon: const Icon(Icons.add_circle_outline),
                     ),
                     const Spacer(),
@@ -580,7 +614,33 @@ class _ProductCustomizationSheetState extends State<ProductCustomizationSheet> {
                     ),
                   ],
                 ),
+
+                if (_showSelectionError && !hasValidSelections)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 17,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Lütfen seçim yapınız.',
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 const SizedBox(height: 8),
+
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
