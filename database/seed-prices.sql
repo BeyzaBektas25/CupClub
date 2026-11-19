@@ -104,14 +104,14 @@ SET "price" = pl.base_price +
     CASE
     WHEN b.name = 'CupClub Kadıköy Moda' THEN
         CASE
-            WHEN c.name = 'Atıştırmalıklar & Fırın Ürünleri' THEN 5
+            WHEN c.name = 'Atıştırmalıklar' THEN 5
             WHEN c.name LIKE 'Sıcak İçecekler / %' THEN 5
             ELSE 10
         END
 
     WHEN b.name = 'CupClub Beşiktaş Çarşı' THEN
         CASE
-            WHEN c.name = 'Atıştırmalıklar & Fırın Ürünleri' THEN 10
+            WHEN c.name = 'Atıştırmalıklar' THEN 10
             WHEN c.name LIKE 'Sıcak İçecekler / %' THEN 10
             WHEN c.name LIKE 'Soğuk İçecekler / %' THEN 12
             ELSE 15

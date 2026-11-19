@@ -1,5 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+} from 'typeorm';
+
 import { Category } from './category.entity';
+import { ProductOptionGroup } from './product-option-group.entity';
 
 @Entity('Products')
 export class Product {
@@ -27,4 +36,10 @@ export class Product {
 
   @Column({ default: true })
   is_active: boolean;
+
+  @OneToMany(
+    () => ProductOptionGroup,
+    (group) => group.product,
+  )
+  optionGroups: ProductOptionGroup[];
 }
