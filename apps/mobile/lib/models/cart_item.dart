@@ -1,20 +1,42 @@
 import 'branch_product.dart';
+import 'product_option.dart';
 
 class CartItem {
   final BranchProduct branchProduct;
+  final List<ProductOption> selectedOptions;
   int quantity;
 
-  CartItem({required this.branchProduct, this.quantity = 1});
+  CartItem({
+    required this.branchProduct,
+    this.selectedOptions = const [],
+    this.quantity = 1,
+  });
 
-  // Ürün adı
   String get productName => branchProduct.product.name;
 
-  // Birim fiyat
-  double get unitPrice => branchProduct.price;
+  double get unitPrice {
+    final optionsPrice = selectedOptions.fold<double>(
+      0,
+      (total, option) => total + option.additionalPrice,
+    );
 
-  // Ürün adedi ile birim fiyatın çarpımı
+    return branchProduct.price + optionsPrice;
+  }
+
   double get subtotal => unitPrice * quantity;
 
-  // Ürün ID'si
   int get productId => branchProduct.productId;
+
+  String get optionsDescription {
+    return selectedOptions.map((option) => option.name).join(', ');
+  }
+
+  bool hasSameOptions(List<ProductOption> options) {
+    if (selectedOptions.length != options.length) return false;
+
+    final currentIds = selectedOptions.map((option) => option.id).toSet();
+    final newIds = options.map((option) => option.id).toSet();
+
+    return currentIds.length == newIds.length && currentIds.containsAll(newIds);
+  }
 }

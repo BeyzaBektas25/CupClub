@@ -3,16 +3,37 @@ import 'package:flutter/material.dart';
 import '../models/branch.dart';
 import '../services/auth_service.dart';
 import '../services/branch_storage_service.dart';
+import '../services/cart_service.dart';
 import 'branch_list_screen.dart';
+import 'cart_screen.dart';
 import 'login_screen.dart';
 import 'menu_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final Branch selectedBranch;
 
   const HomeScreen({super.key, required this.selectedBranch});
 
-  // Kullanıcı çıkış yaptığında
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late final CartService _cartService;
+
+  @override
+  void initState() {
+    super.initState();
+    _cartService = CartService();
+    _cartService.setBranch(widget.selectedBranch.id);
+  }
+
+  @override
+  void dispose() {
+    _cartService.dispose();
+    super.dispose();
+  }
+
   Future<void> _logout(BuildContext context) async {
     final authService = AuthService();
     final branchStorage = BranchStorageService();
@@ -29,12 +50,50 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  void _openMenu() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MenuScreen(
+          selectedBranch: widget.selectedBranch,
+          cartService: _cartService,
+        ),
+      ),
+    );
+  }
+
+  void _openCart() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CartScreen(
+          cartService: _cartService,
+          branchId: widget.selectedBranch.id,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('CupClub'),
         actions: [
+          ListenableBuilder(
+            listenable: _cartService,
+            builder: (context, child) {
+              return IconButton(
+                onPressed: _openCart,
+                icon: Badge(
+                  label: Text('${_cartService.totalQuantity}'),
+                  isLabelVisible: _cartService.totalQuantity > 0,
+                  child: const Icon(Icons.shopping_cart_outlined),
+                ),
+                tooltip: 'Sepetim',
+              );
+            },
+          ),
           IconButton(
             onPressed: () => _logout(context),
             icon: const Icon(Icons.logout),
@@ -51,11 +110,11 @@ class HomeScreen extends StatelessWidget {
             const Text('Seçili şubeniz:'),
             const SizedBox(height: 8),
             Text(
-              selectedBranch.name,
+              widget.selectedBranch.name,
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text(selectedBranch.address),
+            Text(widget.selectedBranch.address),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
@@ -70,16 +129,14 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        MenuScreen(selectedBranch: selectedBranch),
-                  ),
-                );
-              },
+              onPressed: _openMenu,
               child: const Text('Menüyü Görüntüle'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _openCart,
+              icon: const Icon(Icons.shopping_cart_outlined),
+              label: const Text('Sepetim'),
             ),
           ],
         ),

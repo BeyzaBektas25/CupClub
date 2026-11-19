@@ -8,7 +8,6 @@ import '../core/config/api_config.dart';
 class AuthService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  // Ortak POST isteği
   Future<Map<String, dynamic>> _post(
     String endpoint,
     Map<String, dynamic> body,
@@ -34,11 +33,9 @@ class AuthService {
     );
   }
 
-  // Kullanıcı girişi
   Future<Map<String, dynamic>> login(String email, String password) async {
     final data = await _post('login', {'email': email, 'password': password});
 
-    // Giriş başarılıysa token'ı güvenli alana kaydet
     final token = data['access_token'];
 
     if (token != null) {
@@ -48,7 +45,6 @@ class AuthService {
     return data;
   }
 
-  // Yeni kullanıcı kaydı
   Future<Map<String, dynamic>> register(
     String firstName,
     String lastName,
@@ -63,12 +59,35 @@ class AuthService {
     });
   }
 
-  // Kayıtlı token'ı getir
   Future<String?> getToken() async {
     return await _storage.read(key: 'access_token');
   }
 
-  // Kayıtlı token'ın geçerli olup olmadığını kontrol et
+  // Giriş yapan kullanıcının ID'sini getirir.
+  Future<int> getCurrentUserId() async {
+    final token = await getToken();
+
+    if (token == null || token.isEmpty) {
+      throw Exception('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+    }
+
+    final url = Uri.parse('${ApiConfig.baseUrl}/api/auth/me');
+
+    final response = await http.get(
+      url,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Kullanıcı bilgileri alınamadı.');
+    }
+
+    final data = Map<String, dynamic>.from(jsonDecode(response.body));
+    final user = Map<String, dynamic>.from(data['user']);
+
+    return user['id'] as int;
+  }
+
   Future<bool> validateToken() async {
     final token = await getToken();
 
@@ -94,7 +113,6 @@ class AuthService {
     throw Exception('Oturum kontrol edilemedi. Sunucu hatası.');
   }
 
-  // Oturumu kapat
   Future<void> logout() async {
     await _storage.delete(key: 'access_token');
   }

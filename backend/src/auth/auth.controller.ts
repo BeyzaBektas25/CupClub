@@ -8,7 +8,6 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 
@@ -57,7 +56,6 @@ export class AuthController {
     return this.authService.login(body);
   }
 
-  // Kayıtlı token ile kullanıcı oturumunu doğrular
   @Get('me')
   @ApiOperation({ summary: 'Giriş yapan kullanıcının oturumunu doğrular' })
   getProfile(@Headers('authorization') authorization?: string) {
