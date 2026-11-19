@@ -1,5 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+} from 'typeorm';
+
 import { Order } from './order.entity';
+import { OrderItemOption } from './order-item-option.entity';
 
 @Entity('OrderItems')
 export class OrderItem {
@@ -21,4 +30,11 @@ export class OrderItem {
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   unit_price: number;
+
+  @OneToMany(
+    () => OrderItemOption,
+    (option) => option.orderItem,
+    { cascade: true },
+  )
+  options: OrderItemOption[];
 }
