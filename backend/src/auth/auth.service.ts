@@ -25,6 +25,13 @@ export class AuthService {
     email: string;
     password: string;
   }) {
+    // Şifre en az 6 karakter olmalı
+    if (!data.password || data.password.length < 6) {
+      throw new BadRequestException(
+        'Şifre en az 6 karakter olmalıdır.',
+      );
+    }
+
     const existing = await this.userRepo.findOne({
       where: { email: data.email },
     });
