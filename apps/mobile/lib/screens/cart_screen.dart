@@ -4,6 +4,7 @@ import '../models/cart_item.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../services/cart_service.dart';
+import 'order_tracking_screen.dart';
 
 class CartScreen extends StatefulWidget {
   final CartService cartService;
@@ -43,33 +44,27 @@ class _CartScreenState extends State<CartScreen> {
         };
       }).toList();
 
-      await _apiService.createOrder(
+      final order = await _apiService.createOrder(
         userId: userId,
         branchId: widget.branchId,
         items: orderItems,
       );
 
+      final orderId = int.parse(order['id'].toString());
+      final initialStatus = order['status']?.toString() ?? 'Pending';
+
       widget.cartService.clearCart();
 
       if (!mounted) return;
 
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) {
-          return AlertDialog(
-            title: const Text('Siparişiniz alındı!'),
-            content: const Text('Siparişiniz başarıyla oluşturuldu.'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(dialogContext);
-                },
-                child: const Text('Tamam'),
-              ),
-            ],
-          );
-        },
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OrderTrackingScreen(
+            orderId: orderId,
+            initialStatus: initialStatus,
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
