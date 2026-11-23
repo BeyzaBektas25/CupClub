@@ -1,5 +1,5 @@
-
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { loginUser } from '../../services/auth';
 
 function Login() {
@@ -63,6 +63,9 @@ function Login() {
       <button type="submit" disabled={loading}>
         {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
       </button>
+      <p>
+  Hesabın yok mu? <Link to="/register">Kayıt ol</Link>
+</p>
     </form>
   );
 }

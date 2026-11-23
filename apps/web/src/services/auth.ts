@@ -1,4 +1,3 @@
-
 import { apiRequest } from './api';
 
 export type RegisterData = {
