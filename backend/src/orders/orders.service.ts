@@ -1,10 +1,13 @@
 
+
+
+
 import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
-
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -245,13 +248,31 @@ export class OrdersService {
     });
   }
 
-  async updateStatus(orderId: number, status: string) {
+  async updateStatus(
+    orderId: number,
+    status: string,
+    user: { roles: string[]; branchId: number | null },
+  ) {
     const order = await this.orderRepo.findOne({
       where: { id: orderId },
     });
 
     if (!order) {
       throw new NotFoundException('Sipariş bulunamadı.');
+    }
+
+    const isCentralAdmin = user.roles.includes('CENTRAL_ADMIN');
+    const isBranchStaff = user.roles.includes('BRANCH_STAFF');
+
+    if (
+      !isCentralAdmin &&
+      (!isBranchStaff ||
+        !user.branchId ||
+        Number(user.branchId) !== Number(order.branch_id))
+    ) {
+      throw new ForbiddenException(
+        'Bu sipariş üzerinde işlem yapma yetkiniz bulunmuyor.',
+      );
     }
 
     order.status = status;

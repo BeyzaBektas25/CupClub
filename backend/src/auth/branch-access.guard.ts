@@ -1,32 +1,52 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 
 @Injectable()
 export class BranchAccessGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
-    
-    // İstek başlığından (Header) personelin yetkili olduğu şube ID'sini ve rolünü okuyoruz
-    const userRole = request.headers['x-user-role'];
-    const userBranchId = Number(request.headers['x-branch-id']);
-    
-    // İstek atılan hedef şube ID'si (URL parametresinden veya gövdeden)
-    const targetBranchId = Number(request.params.branchId || request.body.branchId);
+    const user = request.user;
 
-    // Merkez yöneticisi (ADMIN) tüm şubelere erişebilir
-    if (userRole === 'ADMIN') {
+    if (!user) {
+      throw new UnauthorizedException('Giriş yapmanız gerekiyor.');
+    }
+
+    const userRoles: string[] = user.roles || [];
+    const userBranchId = user.branchId
+      ? Number(user.branchId)
+      : null;
+
+    const targetBranchId = Number(
+      request.params.branchId || request.body?.branchId,
+    );
+
+    // Merkezi yönetici bütün şubelerin işlemlerini yönetebilir.
+    if (userRoles.includes('CENTRAL_ADMIN')) {
       return true;
     }
 
-    // Şube personeli ise sadece kendi şubesinin verisine erişebilir
-    if (userRole === 'BRANCH_STAFF') {
-      if (!userBranchId || (targetBranchId && userBranchId !== targetBranchId)) {
+    // Şube personeli yalnızca kendi şubesine erişebilir.
+    if (userRoles.includes('BRANCH_STAFF')) {
+      if (
+        !userBranchId ||
+        !targetBranchId ||
+        userBranchId !== targetBranchId
+      ) {
         throw new ForbiddenException(
-          `Yetkisiz Erişim (403): Şube #${userBranchId} personeli, Şube #${targetBranchId} işlemlerini yönetemez!`,
+          'Yalnızca görevli olduğunuz şubenin işlemlerini yönetebilirsiniz.',
         );
       }
+
       return true;
     }
 
-    throw new ForbiddenException('Bu işlem için şube personeli veya yönetici yetkisi gereklidir.');
+    throw new ForbiddenException(
+      'Bu işlem için yeterli yetkiniz bulunmuyor.',
+    );
   }
 }

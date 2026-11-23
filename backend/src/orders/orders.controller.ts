@@ -1,4 +1,7 @@
 
+
+
+
 import {
   Controller,
   Post,
@@ -8,17 +11,17 @@ import {
   Param,
   ParseIntPipe,
   UseGuards,
+  Req,
 } from '@nestjs/common';
-
 import {
   ApiTags,
   ApiOperation,
   ApiBody,
-  ApiHeader,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
-
 import { OrdersService } from './orders.service';
 import { BranchAccessGuard } from '../auth/branch-access.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Orders (Sipariş Yönetimi)')
 @Controller()
@@ -27,7 +30,7 @@ export class OrdersController {
 
   @Post('orders')
   @ApiOperation({
-    summary: 'Müşteri sepetinden sipariş oluşturur',
+    summary: 'Müşteri sepetinden sunucu fiyat kontrolüyle sipariş oluşturur',
   })
   @ApiBody({
     schema: {
@@ -61,29 +64,20 @@ export class OrdersController {
       userId: number;
       branchId: number;
       items: {
-        productId: number;
-        quantity: number;
-        optionIds?: number[];
-      }[];
+  productId: number;
+  quantity: number;
+  optionIds?: number[];
+}[];
     },
   ) {
     return this.ordersService.createOrder(body);
   }
 
   @Get('branches/:branchId/orders')
-  @UseGuards(BranchAccessGuard)
+  @UseGuards(JwtAuthGuard, BranchAccessGuard)
+  @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Yetkili şubenin siparişlerini listeler',
-  })
-  @ApiHeader({
-    name: 'x-user-role',
-    description: 'Kullanıcı Rolü (BRANCH_STAFF veya ADMIN)',
-    example: 'BRANCH_STAFF',
-  })
-  @ApiHeader({
-    name: 'x-branch-id',
-    description: 'Personelin yetkili olduğu şube ID',
-    example: '1',
+    summary: 'Yetkili olduğu şubenin siparişlerini listeler',
   })
   getBranchOrders(
     @Param('branchId', ParseIntPipe) branchId: number,
@@ -92,19 +86,10 @@ export class OrdersController {
   }
 
   @Patch('orders/:orderId/status')
-  @UseGuards(BranchAccessGuard)
+  @UseGuards(JwtAuthGuard, BranchAccessGuard)
+  @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Sipariş durumunu günceller',
-  })
-  @ApiHeader({
-    name: 'x-user-role',
-    description: 'Kullanıcı Rolü (BRANCH_STAFF veya ADMIN)',
-    example: 'BRANCH_STAFF',
-  })
-  @ApiHeader({
-    name: 'x-branch-id',
-    description: 'Personelin yetkili olduğu şube ID',
-    example: '1',
+    summary: 'Sipariş durumunu günceller (Accepted, Preparing, Ready, Delivered)',
   })
   @ApiBody({
     schema: {
@@ -116,9 +101,14 @@ export class OrdersController {
     },
   })
   updateStatus(
-    @Param('orderId', ParseIntPipe) orderId: number,
-    @Body() body: { branchId: number; status: string },
-  ) {
-    return this.ordersService.updateStatus(orderId, body.status);
-  }
+  @Param('orderId', ParseIntPipe) orderId: number,
+  @Body() body: { branchId: number; status: string },
+  @Req() request: any,
+) {
+  return this.ordersService.updateStatus(
+    orderId,
+    body.status,
+    request.user,
+  );
+}
 }
