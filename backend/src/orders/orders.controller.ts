@@ -1,3 +1,7 @@
+
+
+
+
 import {
   Controller,
   Post,
@@ -36,9 +40,22 @@ export class OrdersController {
         branchId: { type: 'number', example: 1 },
         items: {
           type: 'array',
-          example: [{ productId: 1, quantity: 2 }],
+          items: {
+            type: 'object',
+            properties: {
+              productId: { type: 'number', example: 1 },
+              quantity: { type: 'number', example: 2 },
+              optionIds: {
+                type: 'array',
+                items: { type: 'number' },
+                example: [1, 3],
+              },
+            },
+            required: ['productId', 'quantity'],
+          },
         },
       },
+      required: ['userId', 'branchId', 'items'],
     },
   })
   createOrder(
@@ -46,7 +63,11 @@ export class OrdersController {
     body: {
       userId: number;
       branchId: number;
-      items: { productId: number; quantity: number }[];
+      items: {
+  productId: number;
+  quantity: number;
+  optionIds?: number[];
+}[];
     },
   ) {
     return this.ordersService.createOrder(body);

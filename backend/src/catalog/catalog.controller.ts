@@ -1,4 +1,10 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+} from '@nestjs/common';
+
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CatalogService } from './catalog.service';
 
@@ -14,8 +20,26 @@ export class CatalogController {
   }
 
   @Get('branches/:branchId/products')
-  @ApiOperation({ summary: 'Seçilen şubeye özel fiyatları ve stok durumlarıyla ürünleri getirir' })
-  getBranchProducts(@Param('branchId', ParseIntPipe) branchId: number) {
+  @ApiOperation({
+    summary: 'Seçilen şubeye özel fiyatları ve stok durumlarıyla ürünleri getirir',
+  })
+  getBranchProducts(
+    @Param('branchId', ParseIntPipe) branchId: number,
+  ) {
     return this.catalogService.getBranchMenu(branchId);
   }
-}
+
+  @Get('branches/:branchId/products/:productId/options')
+  @ApiOperation({
+    summary: 'Ürünün seçenek gruplarını ve ek ücretlerini getirir',
+  })
+  getProductOptions(
+    @Param('branchId', ParseIntPipe) branchId: number,
+    @Param('productId', ParseIntPipe) productId: number,
+  ) {
+    return this.catalogService.getProductOptions(
+      branchId,
+      productId,
+    );
+  }
+} 

@@ -1,4 +1,13 @@
-import { Controller, Post, Body } from '@nestjs/common';
+
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Headers,
+  UnauthorizedException,
+} from '@nestjs/common';
+
 import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 
@@ -20,7 +29,15 @@ export class AuthController {
       },
     },
   })
-  register(@Body() body: { first_name: string; last_name: string; email: string; password: string }) {
+  register(
+    @Body()
+    body: {
+      first_name: string;
+      last_name: string;
+      email: string;
+      password: string;
+    },
+  ) {
     return this.authService.register(body);
   }
 
@@ -37,5 +54,17 @@ export class AuthController {
   })
   login(@Body() body: { email: string; password: string }) {
     return this.authService.login(body);
+  }
+
+  @Get('me')
+  @ApiOperation({ summary: 'Giriş yapan kullanıcının oturumunu doğrular' })
+  getProfile(@Headers('authorization') authorization?: string) {
+    if (!authorization || !authorization.startsWith('Bearer ')) {
+      throw new UnauthorizedException('Token gönderilmedi.');
+    }
+
+    const token = authorization.substring(7);
+
+    return this.authService.validateToken(token);
   }
 }

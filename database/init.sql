@@ -43,6 +43,7 @@ CREATE TABLE "Products" (
   "description" text,
   "image_url" varchar(255),
   "allergens" text,
+  "unit" varchar(20) NOT NULL DEFAULT 'Adet',
   "is_active" boolean DEFAULT true
 );
 
