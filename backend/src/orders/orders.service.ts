@@ -1,7 +1,3 @@
-
-
-
-
 import {
   Injectable,
   BadRequestException,
@@ -231,22 +227,24 @@ export class OrdersService {
       relations: {
         items: {
           options: true,
+          product: true,
         },
       },
     });
   }
 
   getBranchOrders(branchId: number) {
-    return this.orderRepo.find({
-      where: { branch_id: branchId },
-      relations: {
-        items: {
-          options: true,
-        },
+  return this.orderRepo.find({
+    where: { branch_id: branchId },
+    relations: {
+      items: {
+        options: true,
+        product: true,
       },
-      order: { created_at: 'DESC' },
-    });
-  }
+    },
+    order: { created_at: 'DESC' },
+  });
+}
 
   async updateStatus(
     orderId: number,
