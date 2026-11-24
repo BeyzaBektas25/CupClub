@@ -1,4 +1,3 @@
-
 import {
   Controller,
   Post,
@@ -8,7 +7,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 
-import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 
 @ApiTags('Auth (Kayıt ve Giriş)')
@@ -57,6 +61,7 @@ export class AuthController {
   }
 
   @Get('me')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Giriş yapan kullanıcının oturumunu doğrular' })
   getProfile(@Headers('authorization') authorization?: string) {
     if (!authorization || !authorization.startsWith('Bearer ')) {
