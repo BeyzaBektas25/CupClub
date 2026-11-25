@@ -26,8 +26,8 @@ import { LoyaltyModule } from '../loyalty/loyalty.module';
       Product,
       ProductOptionGroup,
       BranchOptionPrice,
-      LoyaltyModule
     ]),
+    LoyaltyModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService, OrdersGateway],
