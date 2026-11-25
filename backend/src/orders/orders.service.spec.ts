@@ -9,6 +9,7 @@ import { BranchProduct } from '../catalog/branch-product.entity';
 import { ProductOptionGroup } from '../catalog/product-option-group.entity';
 import { BranchOptionPrice } from '../catalog/branch-option-price.entity';
 import { OrdersGateway } from './orders.gateway';
+import { LoyaltyService } from '../loyalty/loyalty.service';
 
 describe('OrdersService', () => {
   let service: OrdersService;
@@ -28,6 +29,10 @@ describe('OrdersService', () => {
     notifyOrderStatusChanged: jest.fn(),
   };
 
+  const mockLoyaltyService = {
+    reverseOrder: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -39,6 +44,7 @@ describe('OrdersService', () => {
         { provide: getRepositoryToken(ProductOptionGroup), useValue: { find: jest.fn().mockResolvedValue([]) } },
         { provide: getRepositoryToken(BranchOptionPrice), useValue: { findOne: jest.fn() } },
         { provide: OrdersGateway, useValue: mockOrdersGateway },
+        { provide: LoyaltyService, useValue: mockLoyaltyService },
       ],
     }).compile();
 
@@ -81,7 +87,7 @@ describe('OrdersService', () => {
     });
 
     await expect(
-      service.updateStatus(100, 'Preparing', {
+      service.updateStatus(100, 'Accepted', {
         roles: ['BRANCH_STAFF'],
         branchId: 1,
       }),
@@ -91,18 +97,18 @@ describe('OrdersService', () => {
   it('yetkili sube personeli durumu guncellediginde siparisi kaydetmeli ve WebSocket bildirimi gondermeli', async () => {
     const order = { id: 100, branch_id: 1, status: 'Pending' };
     mockOrderRepo.findOne.mockResolvedValue(order);
-    mockOrderRepo.save.mockResolvedValue({ ...order, status: 'Preparing' });
+    mockOrderRepo.save.mockResolvedValue({ ...order, status: 'Accepted' });
 
-    const result = await service.updateStatus(100, 'Preparing', {
+    const result = await service.updateStatus(100, 'Accepted', {
       roles: ['BRANCH_STAFF'],
       branchId: 1,
     });
 
-    expect(result.status).toBe('Preparing');
+    expect(result.status).toBe('Accepted');
     expect(mockOrdersGateway.notifyOrderStatusChanged).toHaveBeenCalledWith(
       100,
       1,
-      'Preparing',
+      'Accepted',
     );
   });
 });

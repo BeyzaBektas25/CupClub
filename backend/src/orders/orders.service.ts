@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-
+import { OrderStateMachine } from './order-state.machine';
 import { Order } from './order.entity';
 import { OrderItem } from './order-item.entity';
 import { OrderItemOption } from './order-item-option.entity';
@@ -16,6 +16,7 @@ import { ProductOptionGroup } from '../catalog/product-option-group.entity';
 import { BranchOptionPrice } from '../catalog/branch-option-price.entity';
 
 import { OrdersGateway } from './orders.gateway';
+import { LoyaltyService } from '../loyalty/loyalty.service';
 
 interface OrderItemInput {
   productId: number;
@@ -51,6 +52,8 @@ export class OrdersService {
     private branchOptionPriceRepo: Repository<BranchOptionPrice>,
 
     private ordersGateway: OrdersGateway,
+    private loyaltyService: LoyaltyService,
+
   ) {}
 
   async createOrder(data: CreateOrderInput) {
@@ -272,10 +275,19 @@ export class OrdersService {
         'Bu sipariş üzerinde işlem yapma yetkiniz bulunmuyor.',
       );
     }
-
+    // State Pattern ile geçersiz durum atlamalarını engelle
+    OrderStateMachine.validateTransition(order.status, status);
     order.status = status;
 
     const saved = await this.orderRepo.save(order);
+    if (saved.status === 'Cancelled') {
+      try {
+        await this.loyaltyService.reverseOrder(saved.user_id, saved.id);
+      } catch {
+    // Sipariş henüz puan kazanmamışsa (örneğin Pending iken iptal edildiyse) işlemi bozma
+    }
+  }
+
 
     this.ordersGateway.notifyOrderStatusChanged(
       saved.id,

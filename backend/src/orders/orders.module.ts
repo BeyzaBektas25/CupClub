@@ -14,6 +14,7 @@ import { Product } from '../catalog/product.entity';
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 import { OrdersGateway } from './orders.gateway';
+import { LoyaltyModule } from '../loyalty/loyalty.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { OrdersGateway } from './orders.gateway';
       Product,
       ProductOptionGroup,
       BranchOptionPrice,
+      LoyaltyModule
     ]),
   ],
   controllers: [OrdersController],
