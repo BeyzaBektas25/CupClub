@@ -40,3 +40,19 @@ export function loginUser(data: LoginData) {
     body: data,
   });
 }
+export type ProfileResponse = {
+  user: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+  roles: string[];
+  branchId: number | null;
+};
+
+export function getCurrentUser(token: string) {
+  return apiRequest<ProfileResponse>('/auth/me', {
+    token,
+  });
+}

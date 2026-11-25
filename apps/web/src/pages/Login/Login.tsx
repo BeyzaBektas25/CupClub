@@ -1,36 +1,49 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
-import { loginUser } from '../../services/auth';
+import { Link, useNavigate } from 'react-router-dom';
+import { loginUser, getCurrentUser } from '../../services/auth';
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  
+async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault();
 
-    setError('');
-    setLoading(true);
+  setError('');
+  setLoading(true);
 
-    try {
-      const response = await loginUser({
-        email,
-        password,
-      });
+  try {
+    const response = await loginUser({
+      email,
+      password,
+    });
 
-      sessionStorage.setItem('access_token', response.access_token);
+    sessionStorage.setItem('access_token', response.access_token);
 
-      console.log('Giriş başarılı:', response.user);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Bir hata oluştu.'
-      );
-    } finally {
-      setLoading(false);
+    const profile = await getCurrentUser(response.access_token);
+
+    if (profile.roles.includes('BRANCH_STAFF')) {
+      navigate('/branch/orders');
+    } else if (profile.roles.includes('CENTRAL_ADMIN')) {
+      navigate('/central');
+    } else if (profile.roles.includes('SYSTEM_ADMIN')) {
+      navigate('/system');
+    } else {
+      setError('Bu kullanıcı için tanımlanmış bir panel bulunamadı.');
     }
+  } catch (err) {
+    setError(
+      err instanceof Error ? err.message : 'Bir hata oluştu.'
+    );
+  } finally {
+    setLoading(false);
   }
+}
+
 
   return (
     <form onSubmit={handleSubmit}>
