@@ -5,16 +5,18 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Order } from './order.entity';
 import { OrderItem } from './order-item.entity';
 import { OrderItemOption } from './order-item-option.entity';
+import { CouponRedemption } from './coupon-redemption.entity';
 
 import { BranchProduct } from '../catalog/branch-product.entity';
 import { ProductOptionGroup } from '../catalog/product-option-group.entity';
 import { BranchOptionPrice } from '../catalog/branch-option-price.entity';
-import { Product } from '../catalog/product.entity';
+
+import { Campaign, CampaignRule, Coupon } from '../campaigns/campaign.entity';
+import { LoyaltyModule } from '../loyalty/loyalty.module';
 
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 import { OrdersGateway } from './orders.gateway';
-import { LoyaltyModule } from '../loyalty/loyalty.module';
 
 @Module({
   imports: [
@@ -22,10 +24,13 @@ import { LoyaltyModule } from '../loyalty/loyalty.module';
       Order,
       OrderItem,
       OrderItemOption,
+      CouponRedemption,
       BranchProduct,
-      Product,
       ProductOptionGroup,
       BranchOptionPrice,
+      Campaign,
+      CampaignRule,
+      Coupon,
     ]),
     LoyaltyModule,
   ],
