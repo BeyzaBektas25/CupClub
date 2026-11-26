@@ -93,37 +93,55 @@ export class AuthService {
   }
 
   // Kayıtlı token'ın geçerliliğini kontrol eder
+
   async validateToken(token: string) {
-    try {
-      const payload = await this.jwtService.verifyAsync<{
-        sub: number;
-        email: string;
-      }>(token);
+  try {
+    const payload = await this.jwtService.verifyAsync<{
+      sub: number;
+      email: string;
+    }>(token);
 
-      const user = await this.userRepo.findOne({
-        where: { id: payload.sub },
-      });
+    const user = await this.userRepo.findOne({
+      where: { id: payload.sub },
+    });
 
-      if (!user) {
-        throw new UnauthorizedException('Kullanıcı bulunamadı.');
-      }
-
-      return {
-        user: {
-          id: user.id,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          email: user.email,
-        },
-      };
-    } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-
-      throw new UnauthorizedException(
-        'Oturum geçersiz veya süresi dolmuş.',
-      );
+    if (!user) {
+      throw new UnauthorizedException('Kullanıcı bulunamadı.');
     }
+
+    const userRoles = await this.userRepo.query(
+      `
+      SELECT
+        r.role_name AS role,
+        ur.branch_id AS "branchId"
+      FROM "UserRoles" ur
+      INNER JOIN "Roles" r ON r.id = ur.role_id
+      WHERE ur.user_id = $1
+      `,
+      [user.id],
+    );
+
+    return {
+      user: {
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+      },
+      roles: userRoles.map((item: { role: string }) => item.role),
+      branchId:
+        userRoles.find((item: { role: string; branchId: number | null }) =>
+          item.role === 'BRANCH_STAFF',
+        )?.branchId ?? null,
+    };
+  } catch (error) {
+    if (error instanceof UnauthorizedException) {
+      throw error;
+    }
+
+    throw new UnauthorizedException(
+      'Oturum geçersiz veya süresi dolmuş.',
+    );
   }
+ }
 }

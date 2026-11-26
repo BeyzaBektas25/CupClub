@@ -14,10 +14,11 @@ import {
   ApiTags,
   ApiOperation,
   ApiBody,
-  ApiHeader,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 
 import { OrdersService } from './orders.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BranchAccessGuard } from '../auth/branch-access.guard';
 
 @ApiTags('Orders (Sipariş Yönetimi)')
@@ -35,6 +36,7 @@ export class OrdersController {
       properties: {
         userId: { type: 'number', example: 1 },
         branchId: { type: 'number', example: 1 },
+        couponCode: { type: 'string', example: 'WELCOME20' },
         items: {
           type: 'array',
           items: {
@@ -60,6 +62,7 @@ export class OrdersController {
     body: {
       userId: number;
       branchId: number;
+      couponCode?: string;
       items: {
         productId: number;
         quantity: number;
@@ -71,19 +74,10 @@ export class OrdersController {
   }
 
   @Get('branches/:branchId/orders')
-  @UseGuards(BranchAccessGuard)
+  @UseGuards(JwtAuthGuard, BranchAccessGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Yetkili şubenin siparişlerini listeler',
-  })
-  @ApiHeader({
-    name: 'x-user-role',
-    description: 'Kullanıcı Rolü (BRANCH_STAFF veya ADMIN)',
-    example: 'BRANCH_STAFF',
-  })
-  @ApiHeader({
-    name: 'x-branch-id',
-    description: 'Personelin yetkili olduğu şube ID',
-    example: '1',
   })
   getBranchOrders(
     @Param('branchId', ParseIntPipe) branchId: number,
@@ -92,19 +86,10 @@ export class OrdersController {
   }
 
   @Patch('orders/:orderId/status')
-  @UseGuards(BranchAccessGuard)
+  @UseGuards(JwtAuthGuard, BranchAccessGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Sipariş durumunu günceller',
-  })
-  @ApiHeader({
-    name: 'x-user-role',
-    description: 'Kullanıcı Rolü (BRANCH_STAFF veya ADMIN)',
-    example: 'BRANCH_STAFF',
-  })
-  @ApiHeader({
-    name: 'x-branch-id',
-    description: 'Personelin yetkili olduğu şube ID',
-    example: '1',
   })
   @ApiBody({
     schema: {

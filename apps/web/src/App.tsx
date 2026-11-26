@@ -1,11 +1,17 @@
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login/Login';
+import Register from './pages/Register/Register';
+import BranchOrders from './pages/BranchOrders/BranchOrders';
+
 function App() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-blue-100">
-      <h1 className="text-4xl font-bold text-blue-800">
-        CupClub Web Projesi
-      </h1>
-    </div>
-  )
+    <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/branch/orders" element={<BranchOrders />} />
+    </Routes>
+  );
 }
 
-export default App
+export default App;

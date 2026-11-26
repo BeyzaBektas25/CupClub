@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { Campaign, Coupon } from './campaign.entity';
+import { CampaignStrategyFactory, CampaignContext } from './campaign.strategies';
 
 @Injectable()
 export class CampaignsService {
@@ -10,7 +11,6 @@ export class CampaignsService {
     @InjectRepository(Coupon) private couponRepo: Repository<Coupon>,
   ) {}
 
-  // Aktif kampanyaları öncelik sırasına göre getirir
   getActiveCampaigns() {
     const now = new Date();
     return this.campaignRepo.find({
@@ -24,8 +24,11 @@ export class CampaignsService {
     });
   }
 
-  // Sepet tutarına ve kupona göre uygulanacak en yüksek öncelikli kampanyayı hesaplar
-  async evaluateCart(cartTotal: number, couponCode?: string) {
+  async evaluateCart(
+    cartTotal: number,
+    couponCode?: string,
+    extraContext?: Omit<CampaignContext, 'cartTotal'>,
+  ) {
     const activeCampaigns = await this.getActiveCampaigns();
     let selectedCampaign: Campaign | null = null;
 
@@ -39,26 +42,29 @@ export class CampaignsService {
       }
       selectedCampaign = coupon.campaign;
     } else {
-      // Çakışma kontrolü: En yüksek öncelikli uygun kampanyayı seç
-      selectedCampaign = activeCampaigns.find((c) => Number(cartTotal) >= Number(c.min_cart_amount)) || null;
+      // Çakışma kontrolü: En yüksek öncelikli (priority DESC) uygun kampanyayı seç
+      selectedCampaign =
+        activeCampaigns.find((c) => Number(cartTotal) >= Number(c.min_cart_amount)) || null;
     }
 
     if (!selectedCampaign || Number(cartTotal) < Number(selectedCampaign.min_cart_amount)) {
       return { appliedCampaign: null, discountAmount: 0, finalAmount: cartTotal };
     }
 
-    let discountAmount = 0;
     const rule = selectedCampaign.rules?.[0];
+    const strategy = CampaignStrategyFactory.getStrategy(rule?.rule_type);
 
-    if (rule?.rule_type === 'DISCOUNT_PERCENT') {
-      discountAmount = (cartTotal * Number(rule.rule_value)) / 100;
-    } else if (rule?.rule_type === 'DISCOUNT_FIXED') {
-      discountAmount = Number(rule.rule_value);
-    }
+    const discountAmount = strategy
+      ? strategy.calculateDiscount(Number(rule.rule_value), {
+          cartTotal,
+          ...extraContext,
+        })
+      : 0;
 
     const finalAmount = Math.max(0, cartTotal - discountAmount);
     return {
       appliedCampaign: selectedCampaign.title,
+      strategyUsed: rule?.rule_type ?? 'NONE',
       priority: selectedCampaign.priority,
       canCombine: selectedCampaign.can_combine,
       discountAmount,
