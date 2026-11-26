@@ -1,3 +1,4 @@
+
 import {
   Controller,
   Post,
@@ -7,17 +8,18 @@ import {
   Param,
   ParseIntPipe,
   UseGuards,
-  Req,
 } from '@nestjs/common';
+
 import {
   ApiTags,
   ApiOperation,
   ApiBody,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+
 import { OrdersService } from './orders.service';
-import { BranchAccessGuard } from '../auth/branch-access.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { BranchAccessGuard } from '../auth/branch-access.guard';
 
 @ApiTags('Orders (Sipariş Yönetimi)')
 @Controller()
@@ -26,7 +28,7 @@ export class OrdersController {
 
   @Post('orders')
   @ApiOperation({
-    summary: 'Müşteri sepetinden sunucu fiyat kontrolüyle sipariş oluşturur',
+    summary: 'Müşteri sepetinden sipariş oluşturur',
   })
   @ApiBody({
     schema: {
@@ -34,6 +36,7 @@ export class OrdersController {
       properties: {
         userId: { type: 'number', example: 1 },
         branchId: { type: 'number', example: 1 },
+        couponCode: { type: 'string', example: 'WELCOME20' },
         items: {
           type: 'array',
           items: {
@@ -59,11 +62,12 @@ export class OrdersController {
     body: {
       userId: number;
       branchId: number;
+      couponCode?: string;
       items: {
-  productId: number;
-  quantity: number;
-  optionIds?: number[];
-}[];
+        productId: number;
+        quantity: number;
+        optionIds?: number[];
+      }[];
     },
   ) {
     return this.ordersService.createOrder(body);
@@ -73,7 +77,7 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard, BranchAccessGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Yetkili olduğu şubenin siparişlerini listeler',
+    summary: 'Yetkili şubenin siparişlerini listeler',
   })
   getBranchOrders(
     @Param('branchId', ParseIntPipe) branchId: number,
@@ -85,7 +89,7 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard, BranchAccessGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Sipariş durumunu günceller (Accepted, Preparing, Ready, Delivered)',
+    summary: 'Sipariş durumunu günceller',
   })
   @ApiBody({
     schema: {
@@ -97,14 +101,9 @@ export class OrdersController {
     },
   })
   updateStatus(
-  @Param('orderId', ParseIntPipe) orderId: number,
-  @Body() body: { branchId: number; status: string },
-  @Req() request: any,
-) {
-  return this.ordersService.updateStatus(
-    orderId,
-    body.status,
-    request.user,
-  );
-}
+    @Param('orderId', ParseIntPipe) orderId: number,
+    @Body() body: { branchId: number; status: string },
+  ) {
+    return this.ordersService.updateStatus(orderId, body.status);
+  }
 }
