@@ -15,7 +15,7 @@ import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 import { OrdersGateway } from './orders.gateway';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
-
+/*
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -28,6 +28,24 @@ import { LoyaltyModule } from '../loyalty/loyalty.module';
       BranchOptionPrice,
       LoyaltyModule
     ]),
+  ],
+  controllers: [OrdersController],
+  providers: [OrdersService, OrdersGateway],
+})
+export class OrdersModule {}
+*/
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([
+      Order,
+      OrderItem,
+      OrderItemOption,
+      BranchProduct,
+      Product,
+      ProductOptionGroup,
+      BranchOptionPrice,
+    ]),
+    LoyaltyModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService, OrdersGateway],
