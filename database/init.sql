@@ -398,7 +398,13 @@ INSERT INTO "Coupons" ("campaign_id", "coupon_code", "usage_limit", "used_count"
 (1, 'WELCOME20', 100, 0, true);
 
 -- Sistem Rolleri
-INSERT INTO "Roles" ("role_name") VALUES ('CUSTOMER'), ('BRANCH_STAFF'), ('ADMIN');
+INSERT INTO "Roles" ("role_name")
+VALUES
+    ('CUSTOMER'),
+    ('BRANCH_STAFF'),
+    ('ADMIN'),
+    ('CENTRAL_ADMIN'),
+    ('SYSTEM_ADMIN');
 
 -- Örnek Şube Personeli (Kadıköy Şubesi - branch_id: 1)
 -- Şifresi: 123456 (bcrypt hash)
