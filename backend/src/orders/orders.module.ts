@@ -1,4 +1,3 @@
-
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
@@ -10,6 +9,7 @@ import { CouponRedemption } from './coupon-redemption.entity';
 import { BranchProduct } from '../catalog/branch-product.entity';
 import { ProductOptionGroup } from '../catalog/product-option-group.entity';
 import { BranchOptionPrice } from '../catalog/branch-option-price.entity';
+import { Product } from '../catalog/product.entity';
 
 import { Campaign, CampaignRule, Coupon } from '../campaigns/campaign.entity';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
@@ -26,6 +26,7 @@ import { OrdersGateway } from './orders.gateway';
       OrderItemOption,
       CouponRedemption,
       BranchProduct,
+      Product,
       ProductOptionGroup,
       BranchOptionPrice,
       Campaign,
