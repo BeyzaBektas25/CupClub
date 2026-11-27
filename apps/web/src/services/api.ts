@@ -1,3 +1,4 @@
+
 const API_BASE_URL = 'http://localhost:3000/api';
 
 type ApiOptions = {
@@ -21,11 +22,12 @@ export async function apiRequest<T>(
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
-  const data = await response.json();
+  const responseText = await response.text();
+  const data = responseText ? JSON.parse(responseText) : null;
 
   if (!response.ok) {
     throw new Error(
-      typeof data.message === 'string'
+      typeof data?.message === 'string'
         ? data.message
         : 'Bir hata oluştu.'
     );

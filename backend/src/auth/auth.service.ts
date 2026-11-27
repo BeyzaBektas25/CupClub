@@ -1,4 +1,3 @@
-
 import {
   Injectable,
   BadRequestException,
@@ -27,9 +26,7 @@ export class AuthService {
   }) {
     // Şifre en az 6 karakter olmalı
     if (!data.password || data.password.length < 6) {
-      throw new BadRequestException(
-        'Şifre en az 6 karakter olmalıdır.',
-      );
+      throw new BadRequestException('Şifre en az 6 karakter olmalıdır.');
     }
 
     const existing = await this.userRepo.findOne({
@@ -67,10 +64,7 @@ export class AuthService {
       throw new UnauthorizedException('E-posta veya şifre hatalı.');
     }
 
-    const isMatch = await bcrypt.compare(
-      data.password,
-      user.password_hash,
-    );
+    const isMatch = await bcrypt.compare(data.password, user.password_hash);
 
     if (!isMatch) {
       throw new UnauthorizedException('E-posta veya şifre hatalı.');
@@ -91,26 +85,42 @@ export class AuthService {
       },
     };
   }
-
-  // Kayıtlı token'ın geçerliliğini kontrol eder
-  
-  async validateToken(token: string) {
-  try {
-    const payload = await this.jwtService.verifyAsync<{
-      sub: number;
-      email: string;
-    }>(token);
-
+  async verifyPassword(userId: number, password: string) {
     const user = await this.userRepo.findOne({
-      where: { id: payload.sub },
+      where: { id: userId },
     });
 
     if (!user) {
       throw new UnauthorizedException('Kullanıcı bulunamadı.');
     }
 
-    const userRoles = await this.userRepo.query(
-      `
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+
+    if (!isMatch) {
+      throw new UnauthorizedException('Yönetici şifresi hatalı.');
+    }
+
+    return true;
+  }
+  // Kayıtlı token'ın geçerliliğini kontrol eder
+
+  async validateToken(token: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync<{
+        sub: number;
+        email: string;
+      }>(token);
+
+      const user = await this.userRepo.findOne({
+        where: { id: payload.sub },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('Kullanıcı bulunamadı.');
+      }
+
+      const userRoles = await this.userRepo.query(
+        `
       SELECT
         r.role_name AS role,
         ur.branch_id AS "branchId"
@@ -118,30 +128,29 @@ export class AuthService {
       INNER JOIN "Roles" r ON r.id = ur.role_id
       WHERE ur.user_id = $1
       `,
-      [user.id],
-    );
+        [user.id],
+      );
 
-    return {
-      user: {
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-      },
-      roles: userRoles.map((item: { role: string }) => item.role),
-      branchId:
-        userRoles.find((item: { role: string; branchId: number | null }) =>
-          item.role === 'BRANCH_STAFF',
-        )?.branchId ?? null,
-    };
-  } catch (error) {
-    if (error instanceof UnauthorizedException) {
-      throw error;
+      return {
+        user: {
+          id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email: user.email,
+        },
+        roles: userRoles.map((item: { role: string }) => item.role),
+        branchId:
+          userRoles.find(
+            (item: { role: string; branchId: number | null }) =>
+              item.role === 'BRANCH_STAFF',
+          )?.branchId ?? null,
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      throw new UnauthorizedException('Oturum geçersiz veya süresi dolmuş.');
     }
-
-    throw new UnauthorizedException(
-      'Oturum geçersiz veya süresi dolmuş.',
-    );
   }
- }
 }

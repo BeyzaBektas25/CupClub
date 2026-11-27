@@ -8,6 +8,7 @@ import {
   Param,
   ParseIntPipe,
   Patch,
+  Req,
 } from '@nestjs/common';
 
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -53,7 +54,11 @@ export class BranchesController {
   @Roles('CENTRAL_ADMIN')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Şubeyi tamamen siler' })
-  removeBranch(@Param('id', ParseIntPipe) id: number) {
-    return this.branchesService.remove(id);
+  removeBranch(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('password') password: string,
+    @Req() req: { user: { id: number } },
+  ) {
+    return this.branchesService.remove(id, req.user.id, password);
   }
 }
