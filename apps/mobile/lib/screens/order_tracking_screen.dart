@@ -21,13 +21,28 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
 
   late String _status;
 
-  final List<String> _steps = ['Pending', 'Preparing', 'Ready', 'Completed'];
+  final List<String> _steps = [
+    'Pending',
+    'Accepted',
+    'Preparing',
+    'Ready',
+    'Delivered',
+  ];
+
+  final List<String> _stepLabels = [
+    'Alındı',
+    'Onaylandı',
+    'Hazırlanıyor',
+    'Hazır',
+    'Teslim edildi',
+  ];
 
   final Map<String, String> _statusLabels = {
     'Pending': 'Sipariş alındı',
-    'Preparing': 'Hazırlanıyor',
+    'Accepted': 'Siparişiniz onaylandı',
+    'Preparing': 'Siparişiniz hazırlanıyor',
     'Ready': 'Siparişiniz hazır!',
-    'Completed': 'Sipariş tamamlandı',
+    'Delivered': 'Siparişiniz teslim edildi',
     'Cancelled': 'Sipariş iptal edildi',
   };
 
@@ -82,6 +97,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
           child: Column(
             children: [
               const Icon(Icons.coffee_rounded, size: 65, color: coffeeBrown),
+
               const SizedBox(height: 20),
 
               Text(
@@ -163,7 +179,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
         LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            final itemWidth = width / 4;
+            final itemWidth = width / _steps.length;
 
             return SizedBox(
               height: 48,
@@ -175,7 +191,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                     right: itemWidth / 2,
                     top: 22,
                     child: Row(
-                      children: List.generate(3, (index) {
+                      children: List.generate(_steps.length - 1, (index) {
                         return Expanded(
                           child: Container(
                             height: 4,
@@ -193,7 +209,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                   ),
 
                   Row(
-                    children: List.generate(4, (index) {
+                    children: List.generate(_steps.length, (index) {
                       final isCompleted = index < _currentStep;
                       final isActive = index == _currentStep;
 
@@ -240,17 +256,20 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
         const SizedBox(height: 14),
 
         Row(
-          children: List.generate(4, (index) {
+          children: List.generate(_stepLabels.length, (index) {
             final isReached = index <= _currentStep;
 
             return Expanded(
-              child: Text(
-                ['Alındı', 'Hazırlanıyor', 'Hazır', 'Tamamlandı'][index],
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: isReached ? FontWeight.bold : FontWeight.normal,
-                  color: isReached ? coffeeBrown : Colors.grey,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 1),
+                child: Text(
+                  _stepLabels[index],
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: isReached ? FontWeight.bold : FontWeight.normal,
+                    color: isReached ? coffeeBrown : Colors.grey,
+                  ),
                 ),
               ),
             );

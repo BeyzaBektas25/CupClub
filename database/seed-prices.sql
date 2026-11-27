@@ -1,4 +1,5 @@
 
+
 BEGIN;
 
 WITH price_list(product_name, base_price) AS (

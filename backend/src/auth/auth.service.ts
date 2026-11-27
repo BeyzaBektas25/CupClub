@@ -85,6 +85,7 @@ export class AuthService {
       },
     };
   }
+
   async verifyPassword(userId: number, password: string) {
     const user = await this.userRepo.findOne({
       where: { id: userId },
@@ -102,8 +103,8 @@ export class AuthService {
 
     return true;
   }
-  // Kayıtlı token'ın geçerliliğini kontrol eder
 
+  // Kayıtlı token'ın geçerliliğini kontrol eder
   async validateToken(token: string) {
     try {
       const payload = await this.jwtService.verifyAsync<{
