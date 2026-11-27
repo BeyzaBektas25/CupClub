@@ -23,10 +23,45 @@ export class AuthService {
     last_name: string;
     email: string;
     password: string;
+    date_of_birth: string;
   }) {
-    // Şifre en az 6 karakter olmalı
     if (!data.password || data.password.length < 6) {
       throw new BadRequestException('Şifre en az 6 karakter olmalıdır.');
+    }
+
+    if (!data.date_of_birth) {
+      throw new BadRequestException('Doğum tarihi zorunludur.');
+    }
+
+    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+    if (!datePattern.test(data.date_of_birth)) {
+      throw new BadRequestException(
+        'Doğum tarihi YYYY-MM-DD formatında olmalıdır.',
+      );
+    }
+
+    const [year, month, day] = data.date_of_birth.split('-').map(Number);
+
+    const birthDate = new Date(Date.UTC(year, month - 1, day));
+
+    if (
+      birthDate.getUTCFullYear() !== year ||
+      birthDate.getUTCMonth() !== month - 1 ||
+      birthDate.getUTCDate() !== day
+    ) {
+      throw new BadRequestException('Geçerli bir doğum tarihi giriniz.');
+    }
+
+    const today = new Date();
+    const todayUTC = Date.UTC(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
+
+    if (birthDate.getTime() > todayUTC) {
+      throw new BadRequestException('Doğum tarihi gelecekte olamaz.');
     }
 
     const existing = await this.userRepo.findOne({
@@ -44,6 +79,7 @@ export class AuthService {
       last_name: data.last_name,
       email: data.email,
       password_hash,
+      date_of_birth: data.date_of_birth,
     });
 
     await this.userRepo.save(user);
@@ -86,6 +122,7 @@ export class AuthService {
     };
   }
 
+  // Yönetici şifresini doğrular
   async verifyPassword(userId: number, password: string) {
     const user = await this.userRepo.findOne({
       where: { id: userId },
@@ -95,7 +132,10 @@ export class AuthService {
       throw new UnauthorizedException('Kullanıcı bulunamadı.');
     }
 
-    const isMatch = await bcrypt.compare(password, user.password_hash);
+    const isMatch = await bcrypt.compare(
+      password,
+      user.password_hash,
+    );
 
     if (!isMatch) {
       throw new UnauthorizedException('Yönetici şifresi hatalı.');
@@ -122,13 +162,13 @@ export class AuthService {
 
       const userRoles = await this.userRepo.query(
         `
-      SELECT
-        r.role_name AS role,
-        ur.branch_id AS "branchId"
-      FROM "UserRoles" ur
-      INNER JOIN "Roles" r ON r.id = ur.role_id
-      WHERE ur.user_id = $1
-      `,
+        SELECT
+          r.role_name AS role,
+          ur.branch_id AS "branchId"
+        FROM "UserRoles" ur
+        INNER JOIN "Roles" r ON r.id = ur.role_id
+        WHERE ur.user_id = $1
+        `,
         [user.id],
       );
 
@@ -139,11 +179,15 @@ export class AuthService {
           last_name: user.last_name,
           email: user.email,
         },
-        roles: userRoles.map((item: { role: string }) => item.role),
+        roles: userRoles.map(
+          (item: { role: string }) => item.role,
+        ),
         branchId:
           userRoles.find(
-            (item: { role: string; branchId: number | null }) =>
-              item.role === 'BRANCH_STAFF',
+            (item: {
+              role: string;
+              branchId: number | null;
+            }) => item.role === 'BRANCH_STAFF',
           )?.branchId ?? null,
       };
     } catch (error) {
@@ -151,7 +195,9 @@ export class AuthService {
         throw error;
       }
 
-      throw new UnauthorizedException('Oturum geçersiz veya süresi dolmuş.');
+      throw new UnauthorizedException(
+        'Oturum geçersiz veya süresi dolmuş.',
+      );
     }
   }
 }

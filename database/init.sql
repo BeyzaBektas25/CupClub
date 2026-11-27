@@ -5,6 +5,7 @@ CREATE TABLE "Users" (
   "email" varchar(100) UNIQUE,
   "phone" varchar(20) UNIQUE,
   "password_hash" varchar(255),
+  "date_of_birth" DATE,
   "created_at" timestamp DEFAULT (now())
 );
 

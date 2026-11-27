@@ -33,6 +33,7 @@ class AuthService {
     );
   }
 
+  // Kullanıcı girişi
   Future<Map<String, dynamic>> login(String email, String password) async {
     final data = await _post('login', {'email': email, 'password': password});
 
@@ -45,20 +46,24 @@ class AuthService {
     return data;
   }
 
+  // Yeni kullanıcı kaydı
   Future<Map<String, dynamic>> register(
     String firstName,
     String lastName,
     String email,
     String password,
+    String dateOfBirth,
   ) async {
     return await _post('register', {
       'first_name': firstName,
       'last_name': lastName,
       'email': email,
       'password': password,
+      'date_of_birth': dateOfBirth,
     });
   }
 
+  // Kayıtlı token'ı getirir.
   Future<String?> getToken() async {
     return await _storage.read(key: 'access_token');
   }
@@ -88,6 +93,7 @@ class AuthService {
     return user['id'] as int;
   }
 
+  // Oturumun geçerliliğini kontrol eder.
   Future<bool> validateToken() async {
     final token = await getToken();
 
@@ -113,6 +119,7 @@ class AuthService {
     throw Exception('Oturum kontrol edilemedi. Sunucu hatası.');
   }
 
+  // Kullanıcı çıkışı
   Future<void> logout() async {
     await _storage.delete(key: 'access_token');
   }
