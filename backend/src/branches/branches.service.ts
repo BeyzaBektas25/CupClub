@@ -5,6 +5,7 @@ import { Branch } from './branch.entity';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { NotFoundException } from '@nestjs/common';
 import { UpdateBranchDto } from './dto/update-branch.dto';
+import { AuthService } from '../auth/auth.service';
 
 @Injectable()
 export class BranchesService {
@@ -22,6 +23,7 @@ export class BranchesService {
   constructor(
     @InjectRepository(Branch)
     private branchRepository: Repository<Branch>,
+    private authService: AuthService,
   ) {}
 
   findAll(): Promise<Branch[]> {
@@ -33,13 +35,14 @@ export class BranchesService {
 
     return this.branchRepository.save(branch);
   }
-  async remove(id: number): Promise<void> {
+  async remove(id: number, userId: number, password: string): Promise<void> {
     const branch = await this.branchRepository.findOneBy({ id });
 
     if (!branch) {
       throw new NotFoundException('Şube bulunamadı.');
     }
 
+    await this.authService.verifyPassword(userId, password);
     await this.branchRepository.remove(branch);
   }
 }
