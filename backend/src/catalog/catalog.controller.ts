@@ -9,7 +9,7 @@ import {
   Body,
   UseGuards,
 } from '@nestjs/common';
-
+import { UpdateBranchProductDto } from './dto/update-branch-product.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CatalogService } from './catalog.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -75,5 +75,19 @@ export class CatalogController {
   @ApiOperation({ summary: 'Ürünü siler' })
   deleteProduct(@Param('id', ParseIntPipe) id: number) {
     return this.catalogService.deleteProduct(id);
+  }
+  @Patch('branches/:branchId/products/:productId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('CENTRAL_ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Şubeye özel ürün fiyatını ve stok durumunu günceller',
+  })
+  updateBranchProduct(
+    @Param('branchId', ParseIntPipe) branchId: number,
+    @Param('productId', ParseIntPipe) productId: number,
+    @Body() dto: UpdateBranchProductDto,
+  ) {
+    return this.catalogService.updateBranchProduct(branchId, productId, dto);
   }
 }
