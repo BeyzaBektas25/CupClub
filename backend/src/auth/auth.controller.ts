@@ -1,3 +1,4 @@
+
 import {
   Controller,
   Post,
@@ -13,6 +14,7 @@ import {
   ApiBody,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+
 import { AuthService } from './auth.service';
 
 @ApiTags('Auth (Kayıt ve Giriş)')
@@ -25,11 +27,35 @@ export class AuthController {
   @ApiBody({
     schema: {
       type: 'object',
+      required: [
+        'first_name',
+        'last_name',
+        'email',
+        'password',
+        'date_of_birth',
+      ],
       properties: {
-        first_name: { type: 'string', example: 'Beyza' },
-        last_name: { type: 'string', example: 'Yılmaz' },
-        email: { type: 'string', example: 'beyza@cupclub.com' },
-        password: { type: 'string', example: '123456' },
+        first_name: {
+          type: 'string',
+          example: 'Beyza',
+        },
+        last_name: {
+          type: 'string',
+          example: 'Yılmaz',
+        },
+        email: {
+          type: 'string',
+          example: 'beyza@cupclub.com',
+        },
+        password: {
+          type: 'string',
+          example: '123456',
+        },
+        date_of_birth: {
+          type: 'string',
+          format: 'date',
+          example: '2000-05-15',
+        },
       },
     },
   })
@@ -40,6 +66,7 @@ export class AuthController {
       last_name: string;
       email: string;
       password: string;
+      date_of_birth: string;
     },
   ) {
     return this.authService.register(body);
