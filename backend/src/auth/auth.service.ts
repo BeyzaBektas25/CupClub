@@ -1,4 +1,3 @@
-
 import {
   Injectable,
   BadRequestException,
@@ -27,16 +26,11 @@ export class AuthService {
     date_of_birth: string;
   }) {
     if (!data.password || data.password.length < 6) {
-      throw new BadRequestException(
-        'Şifre en az 6 karakter olmalıdır.',
-      );
+      throw new BadRequestException('Şifre en az 6 karakter olmalıdır.');
     }
 
-    // Doğum tarihi kontrolü
     if (!data.date_of_birth) {
-      throw new BadRequestException(
-        'Doğum tarihi zorunludur.',
-      );
+      throw new BadRequestException('Doğum tarihi zorunludur.');
     }
 
     const datePattern = /^\d{4}-\d{2}-\d{2}$/;
@@ -47,9 +41,7 @@ export class AuthService {
       );
     }
 
-    const [year, month, day] = data.date_of_birth
-      .split('-')
-      .map(Number);
+    const [year, month, day] = data.date_of_birth.split('-').map(Number);
 
     const birthDate = new Date(Date.UTC(year, month - 1, day));
 
@@ -58,9 +50,7 @@ export class AuthService {
       birthDate.getUTCMonth() !== month - 1 ||
       birthDate.getUTCDate() !== day
     ) {
-      throw new BadRequestException(
-        'Geçerli bir doğum tarihi giriniz.',
-      );
+      throw new BadRequestException('Geçerli bir doğum tarihi giriniz.');
     }
 
     const today = new Date();
@@ -71,9 +61,7 @@ export class AuthService {
     );
 
     if (birthDate.getTime() > todayUTC) {
-      throw new BadRequestException(
-        'Doğum tarihi gelecekte olamaz.',
-      );
+      throw new BadRequestException('Doğum tarihi gelecekte olamaz.');
     }
 
     const existing = await this.userRepo.findOne({
@@ -81,9 +69,7 @@ export class AuthService {
     });
 
     if (existing) {
-      throw new BadRequestException(
-        'Bu e-posta adresi zaten kayıtlı.',
-      );
+      throw new BadRequestException('Bu e-posta adresi zaten kayıtlı.');
     }
 
     const password_hash = await bcrypt.hash(data.password, 10);
@@ -111,20 +97,13 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException(
-        'E-posta veya şifre hatalı.',
-      );
+      throw new UnauthorizedException('E-posta veya şifre hatalı.');
     }
 
-    const isMatch = await bcrypt.compare(
-      data.password,
-      user.password_hash,
-    );
+    const isMatch = await bcrypt.compare(data.password, user.password_hash);
 
     if (!isMatch) {
-      throw new UnauthorizedException(
-        'E-posta veya şifre hatalı.',
-      );
+      throw new UnauthorizedException('E-posta veya şifre hatalı.');
     }
 
     const payload = {
@@ -150,9 +129,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException(
-        'Kullanıcı bulunamadı.',
-      );
+      throw new UnauthorizedException('Kullanıcı bulunamadı.');
     }
 
     const isMatch = await bcrypt.compare(
@@ -161,9 +138,7 @@ export class AuthService {
     );
 
     if (!isMatch) {
-      throw new UnauthorizedException(
-        'Yönetici şifresi hatalı.',
-      );
+      throw new UnauthorizedException('Yönetici şifresi hatalı.');
     }
 
     return true;
@@ -182,9 +157,7 @@ export class AuthService {
       });
 
       if (!user) {
-        throw new UnauthorizedException(
-          'Kullanıcı bulunamadı.',
-        );
+        throw new UnauthorizedException('Kullanıcı bulunamadı.');
       }
 
       const userRoles = await this.userRepo.query(
