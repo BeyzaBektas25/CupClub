@@ -22,9 +22,122 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   bool _isSubmitting = false;
+  bool _isCheckingCoupon = false;
 
   final AuthService _authService = AuthService();
   final ApiService _apiService = ApiService();
+  final TextEditingController _couponController = TextEditingController();
+
+  bool _couponApplied = false;
+  double _discountAmount = 0;
+  double? _couponCartTotal;
+  String? _couponMessage;
+
+  bool get _isCouponValidForCurrentCart {
+    if (!_couponApplied || _couponCartTotal == null) {
+      return false;
+    }
+
+    return (widget.cartService.totalPrice - _couponCartTotal!).abs() < 0.005;
+  }
+
+  double get _finalTotal {
+    if (_isCouponValidForCurrentCart) {
+      return (widget.cartService.totalPrice - _discountAmount)
+          .clamp(0, double.infinity)
+          .toDouble();
+    }
+
+    return widget.cartService.totalPrice;
+  }
+
+  void _onCouponChanged(String value) {
+    setState(() {
+      _couponMessage = null;
+
+      if (_couponApplied) {
+        _couponApplied = false;
+        _discountAmount = 0;
+        _couponCartTotal = null;
+      }
+    });
+  }
+
+  Future<void> _applyCoupon() async {
+    final couponCode = _couponController.text.trim();
+
+    if (couponCode.isEmpty) {
+      setState(() {
+        _couponMessage = 'Lütfen bir kupon kodu girin.';
+        _couponApplied = false;
+      });
+      return;
+    }
+
+    if (_isCheckingCoupon || widget.cartService.items.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _isCheckingCoupon = true;
+      _couponMessage = null;
+      _couponApplied = false;
+      _discountAmount = 0;
+      _couponCartTotal = null;
+    });
+
+    try {
+      final cartTotal = widget.cartService.totalPrice;
+
+      final result = await _apiService.evaluateCoupon(
+        cartTotal: cartTotal,
+        couponCode: couponCode,
+      );
+
+      final campaign = result['appliedCampaign'];
+
+      if (campaign == null) {
+        throw Exception('Bu kupon mevcut sepetiniz için uygulanamıyor.');
+      }
+
+      final discount =
+          double.tryParse(result['discountAmount']?.toString() ?? '') ?? 0;
+
+      if (!mounted) return;
+
+      setState(() {
+        _couponApplied = true;
+        _discountAmount = discount;
+        _couponCartTotal = cartTotal;
+        _couponMessage = 'Kupon başarıyla uygulandı.';
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _couponApplied = false;
+        _discountAmount = 0;
+        _couponCartTotal = null;
+        _couponMessage = e.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCheckingCoupon = false;
+        });
+      }
+    }
+  }
+
+  void _removeCoupon() {
+    setState(() {
+      _couponApplied = false;
+      _discountAmount = 0;
+      _couponCartTotal = null;
+      _couponMessage = 'Kupon kaldırıldı.';
+      _couponController.clear();
+    });
+  }
 
   Future<void> _completeOrder() async {
     if (_isSubmitting || widget.cartService.items.isEmpty) return;
@@ -48,6 +161,9 @@ class _CartScreenState extends State<CartScreen> {
         userId: userId,
         branchId: widget.branchId,
         items: orderItems,
+        couponCode: _isCouponValidForCurrentCart
+            ? _couponController.text.trim()
+            : null,
       );
 
       final orderId = int.parse(order['id'].toString());
@@ -81,6 +197,12 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   @override
+  void dispose() {
+    _couponController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Sepetim')),
@@ -88,6 +210,8 @@ class _CartScreenState extends State<CartScreen> {
         listenable: widget.cartService,
         builder: (context, child) {
           final items = widget.cartService.items;
+          final cartTotal = widget.cartService.totalPrice;
+          final couponIsCurrent = _isCouponValidForCurrentCart;
 
           if (items.isEmpty) {
             return const Center(child: Text('Sepetiniz henüz boş.'));
@@ -114,7 +238,117 @@ class _CartScreenState extends State<CartScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      const Divider(),
+                      const Text(
+                        'Kupon Kodu',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _couponController,
+                              textCapitalization: TextCapitalization.characters,
+                              enabled: !_isCheckingCoupon && !_isSubmitting,
+                              decoration: const InputDecoration(
+                                hintText: 'Kupon kodunuzu girin',
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 14,
+                                ),
+                              ),
+                              onChanged: _onCouponChanged,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed:
+                                _isCheckingCoupon ||
+                                    _isSubmitting ||
+                                    _couponController.text.trim().isEmpty
+                                ? null
+                                : _applyCoupon,
+                            child: _isCheckingCoupon
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text('Uygula'),
+                          ),
+                        ],
+                      ),
+                      if (_couponMessage != null) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _couponMessage!,
+                                style: TextStyle(
+                                  color: _couponApplied && couponIsCurrent
+                                      ? Colors.green
+                                      : Colors.redAccent,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                            if (_couponApplied)
+                              TextButton(
+                                onPressed: _isSubmitting ? null : _removeCoupon,
+                                child: const Text('Kaldır'),
+                              ),
+                          ],
+                        ),
+                      ],
+                      if (_couponApplied && !couponIsCurrent)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 6),
+                          child: Text(
+                            'Sepet tutarı değişti. Kuponu yeniden uygulayın.',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Ara Toplam'),
+                          Text('${cartTotal.toStringAsFixed(2)} TL'),
+                        ],
+                      ),
+                      if (couponIsCurrent) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Kupon İndirimi',
+                              style: TextStyle(color: Colors.green),
+                            ),
+                            Text(
+                              '-${_discountAmount.toStringAsFixed(2)} TL',
+                              style: const TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const Divider(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -126,7 +360,7 @@ class _CartScreenState extends State<CartScreen> {
                             ),
                           ),
                           Text(
-                            '${widget.cartService.totalPrice.toStringAsFixed(2)} TL',
+                            '${_finalTotal.toStringAsFixed(2)} TL',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 18,

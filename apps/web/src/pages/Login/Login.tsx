@@ -9,7 +9,7 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  
+
 async function handleSubmit(event: FormEvent<HTMLFormElement>) {
   event.preventDefault();
 

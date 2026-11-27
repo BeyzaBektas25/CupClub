@@ -93,7 +93,7 @@ export class AuthService {
   }
 
   // Kayıtlı token'ın geçerliliğini kontrol eder
-  
+
   async validateToken(token: string) {
   try {
     const payload = await this.jwtService.verifyAsync<{

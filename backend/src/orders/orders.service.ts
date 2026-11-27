@@ -185,8 +185,7 @@ export class OrdersService {
 
           const orderItemOption = new OrderItemOption();
           orderItemOption.option_id = option.id;
-          orderItemOption.additional_price =
-            additionalPrice;
+          orderItemOption.additional_price = additionalPrice;
 
           orderItemOptions.push(orderItemOption);
         }
@@ -420,11 +419,15 @@ export class OrdersService {
 
     const saved = await orderRepo.save(order);
 
-    // Sipariş ilk kez tamamlandığında sadakat puanı ve damga ekle.
-    if (
-      status === 'Completed' &&
-      previousStatus !== 'Completed'
-    ) {
+    // Completed ve Delivered siparişin tamamlandığı durumlar olarak kabul edilir.
+    // Bu durumlardan ilkine geçildiğinde yalnızca bir kez puan kazandırılır.
+    const completedStatuses = ['Completed', 'Delivered'];
+
+    const isNowCompleted = completedStatuses.includes(status);
+    const wasAlreadyCompleted =
+      completedStatuses.includes(previousStatus);
+
+    if (isNowCompleted && !wasAlreadyCompleted) {
       await this.loyaltyService.earnFromOrder(
         saved.user_id,
         saved.id,
