@@ -34,6 +34,16 @@ export class CatalogService {
       order: { display_order: 'ASC' },
     });
   }
+  getProducts() {
+    return this.productRepo.find({
+      relations: {
+        category: true,
+      },
+      order: {
+        id: 'ASC',
+      },
+    });
+  }
 
   getBranchMenu(branchId: number) {
     return this.branchProductRepo.find({
