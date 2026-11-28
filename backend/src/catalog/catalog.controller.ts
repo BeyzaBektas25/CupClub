@@ -48,6 +48,14 @@ export class CatalogController {
   ) {
     return this.catalogService.getProductOptions(branchId, productId);
   }
+  @Get('products')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('CENTRAL_ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Tüm ürünleri listeler' })
+  getProducts() {
+    return this.catalogService.getProducts();
+  }
   @Post('products')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('CENTRAL_ADMIN')
